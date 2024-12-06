@@ -28,7 +28,9 @@ class MyApp : public mgl::App {
   mgl::ShaderProgram *Shaders = nullptr;
   mgl::Camera *Camera = nullptr;
   GLint ModelMatrixId;
-  mgl::Mesh *Mesh = nullptr;
+  mgl::Mesh* SquareMesh = nullptr;
+  mgl::Mesh* TriangleMesh = nullptr;
+  mgl::Mesh* ParallelogramMesh = nullptr;
 
   void createMeshes();
   void createShaderPrograms();
@@ -52,13 +54,24 @@ void MyApp::createMeshes() {
   // std::string mesh_file = "teapot-vn-flat.obj";
   // std::string mesh_file = "teapot-vn-smooth.obj";
   // std::string mesh_file = "bunny-vn-flat.obj";
-  std::string mesh_file = "bunny-vn-smooth.obj";
+  std::string mesh_file = "square.obj";
+  std::string mesh_file2 = "parallelogram.obj";
+  std::string mesh_file3 = "triangle.obj";
   //std::string mesh_file = "monkey-torus-vtn-flat.obj";
   std::string mesh_fullname = mesh_dir + mesh_file;
+  SquareMesh = new mgl::Mesh();
+  SquareMesh->joinIdenticalVertices();
+  SquareMesh->create(mesh_fullname);
 
-  Mesh = new mgl::Mesh();
-  Mesh->joinIdenticalVertices();
-  Mesh->create(mesh_fullname);
+  mesh_fullname = mesh_dir + mesh_file2;
+  ParallelogramMesh = new mgl::Mesh();
+  ParallelogramMesh->joinIdenticalVertices();
+  ParallelogramMesh->create(mesh_fullname);
+
+  mesh_fullname = mesh_dir + mesh_file3;
+  TriangleMesh = new mgl::Mesh();
+  TriangleMesh->joinIdenticalVertices();
+  TriangleMesh->create(mesh_fullname);
 }
 
 ///////////////////////////////////////////////////////////////////////// SHADER
@@ -69,13 +82,13 @@ void MyApp::createShaderPrograms() {
   Shaders->addShader(GL_FRAGMENT_SHADER, "cube-fs.glsl");
 
   Shaders->addAttribute(mgl::POSITION_ATTRIBUTE, mgl::Mesh::POSITION);
-  if (Mesh->hasNormals()) {
+  if (SquareMesh->hasNormals()) {
     Shaders->addAttribute(mgl::NORMAL_ATTRIBUTE, mgl::Mesh::NORMAL);
   }
-  if (Mesh->hasTexcoords()) {
+  if (SquareMesh->hasTexcoords()) {
     Shaders->addAttribute(mgl::TEXCOORD_ATTRIBUTE, mgl::Mesh::TEXCOORD);
   }
-  if (Mesh->hasTangentsAndBitangents()) {
+  if (SquareMesh->hasTangentsAndBitangents()) {
     Shaders->addAttribute(mgl::TANGENT_ATTRIBUTE, mgl::Mesh::TANGENT);
   }
 
@@ -119,7 +132,10 @@ glm::mat4 ModelMatrix(1.0f);
 void MyApp::drawScene() {
   Shaders->bind();
   glUniformMatrix4fv(ModelMatrixId, 1, GL_FALSE, glm::value_ptr(ModelMatrix));
-  Mesh->draw();
+  SquareMesh->draw();
+  TriangleMesh->draw();
+  ParallelogramMesh->draw();
+
   Shaders->unbind();
 }
 
