@@ -113,12 +113,12 @@ void MyApp::createShaderPrograms() {
 
 // Eye(5,5,5) Center(0,0,0) Up(0,1,0)
 const glm::mat4 ViewMatrix1 =
-    glm::lookAt(glm::vec3(5.0f, 5.0f, 0.0f), glm::vec3(0.0f, 0.0f, 0.0f),
+    glm::lookAt(glm::vec3(0.0f, 5.0f, 5.0f), glm::vec3(0.0f, 0.0f, 0.0f),
                 glm::vec3(0.0f, 1.0f, 0.0f));
 
 // Eye(-5,-5,-5) Center(0,0,0) Up(0,1,0)
 const glm::mat4 ViewMatrix2 =
-    glm::lookAt(glm::vec3(-5.0f, 5.0f, 0.0f), glm::vec3(0.0f, 0.0f, 0.0f),
+    glm::lookAt(glm::vec3(0.0f, 5.0f, -5.0f), glm::vec3(0.0f, 0.0f, 0.0f),
                 glm::vec3(0.0f, 1.0f, 0.0f));
 
 // Orthographic LeftRight(-2,2) BottomTop(-2,2) NearFar(1,10) 
