@@ -34,4 +34,12 @@
       <Filter>Arquivos de Origem</Filter>
     </ClCompile>
   </ItemGroup>
+  <ItemGroup>
+    <None Include="cube-fs.glsl">
+      <Filter>Arquivos de Recurso</Filter>
+    </None>
+    <None Include="cube-vs.glsl">
+      <Filter>Arquivos de Recurso</Filter>
+    </None>
+  </ItemGroup>
 </Project>

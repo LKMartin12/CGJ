@@ -12,7 +12,7 @@
 #include <glm/glm.hpp>
 #include <glm/gtc/type_ptr.hpp>
 #include <glm/gtx/transform.hpp>
-
+#include <iostream>
 #include "mgl/mgl.hpp"
 
 ////////////////////////////////////////////////////////////////////////// MYAPP
@@ -22,6 +22,7 @@ class MyApp : public mgl::App {
   void initCallback(GLFWwindow *win) override;
   void displayCallback(GLFWwindow *win, double elapsed) override;
   void windowSizeCallback(GLFWwindow *win, int width, int height) override;
+  void keyCallback(GLFWwindow* win, int key, int scancode, int action, int mods) override;
 
  private:
   const GLuint UBO_BP = 0;
@@ -31,6 +32,8 @@ class MyApp : public mgl::App {
   mgl::Mesh* SquareMesh = nullptr;
   mgl::Mesh* TriangleMesh = nullptr;
   mgl::Mesh* ParallelogramMesh = nullptr;
+  std::vector<mgl::Mesh*> Meshes;
+  std::vector<glm::mat4> ModelMatrices;
 
   void createMeshes();
   void createShaderPrograms();
@@ -62,16 +65,23 @@ void MyApp::createMeshes() {
   SquareMesh = new mgl::Mesh();
   SquareMesh->joinIdenticalVertices();
   SquareMesh->create(mesh_fullname);
+  Meshes.push_back(SquareMesh);
 
   mesh_fullname = mesh_dir + mesh_file2;
   ParallelogramMesh = new mgl::Mesh();
   ParallelogramMesh->joinIdenticalVertices();
   ParallelogramMesh->create(mesh_fullname);
+  Meshes.push_back(ParallelogramMesh);
 
   mesh_fullname = mesh_dir + mesh_file3;
-  TriangleMesh = new mgl::Mesh();
-  TriangleMesh->joinIdenticalVertices();
-  TriangleMesh->create(mesh_fullname);
+  for (uint16_t i = 0; i < 5; i++) {
+	  //ModelMatrices.push_back(glm::translate(glm::vec3(i, 0, 0)));
+	  TriangleMesh = new mgl::Mesh();
+	  TriangleMesh->joinIdenticalVertices();
+	  TriangleMesh->create(mesh_fullname);
+	  Meshes.push_back(TriangleMesh);
+  }
+  ModelMatrices.resize(Meshes.size(), glm::mat4(1.0f));
 }
 
 ///////////////////////////////////////////////////////////////////////// SHADER
@@ -103,19 +113,21 @@ void MyApp::createShaderPrograms() {
 
 // Eye(5,5,5) Center(0,0,0) Up(0,1,0)
 const glm::mat4 ViewMatrix1 =
-    glm::lookAt(glm::vec3(5.0f, 5.0f, 5.0f), glm::vec3(0.0f, 0.0f, 0.0f),
+    glm::lookAt(glm::vec3(5.0f, 5.0f, 0.0f), glm::vec3(0.0f, 0.0f, 0.0f),
                 glm::vec3(0.0f, 1.0f, 0.0f));
 
 // Eye(-5,-5,-5) Center(0,0,0) Up(0,1,0)
 const glm::mat4 ViewMatrix2 =
-    glm::lookAt(glm::vec3(-5.0f, -5.0f, -5.0f), glm::vec3(0.0f, 0.0f, 0.0f),
+    glm::lookAt(glm::vec3(-5.0f, 5.0f, 0.0f), glm::vec3(0.0f, 0.0f, 0.0f),
                 glm::vec3(0.0f, 1.0f, 0.0f));
 
-// Orthographic LeftRight(-2,2) BottomTop(-2,2) NearFar(1,10)
+// Orthographic LeftRight(-2,2) BottomTop(-2,2) NearFar(1,10) 
+//projection 0
 const glm::mat4 ProjectionMatrix1 =
     glm::ortho(-2.0f, 2.0f, -2.0f, 2.0f, 1.0f, 10.0f);
 
 // Perspective Fovy(30) Aspect(640/480) NearZ(1) FarZ(10)
+//projection 1
 const glm::mat4 ProjectionMatrix2 =
     glm::perspective(glm::radians(30.0f), 640.0f / 480.0f, 1.0f, 10.0f);
 
@@ -131,10 +143,29 @@ glm::mat4 ModelMatrix(1.0f);
 
 void MyApp::drawScene() {
   Shaders->bind();
-  glUniformMatrix4fv(ModelMatrixId, 1, GL_FALSE, glm::value_ptr(ModelMatrix));
-  SquareMesh->draw();
+  for (uint16_t i = 0; i < 7; i++) {
+	  /*if (i == 3) {
+		  ModelMatrices[i] = glm::translate(glm::vec3(0, 0, 0));
+	  }
+	  else if (i == 4) {
+		  ModelMatrices[i] = glm::translate(glm::vec3(1, 0, 0));
+	  }
+	  else if (i == 5) {
+		  ModelMatrices[i] = glm::translate(glm::vec3(2, 0, 0));
+	  }
+	  else if (i == 6) {
+		  ModelMatrices[i] = glm::translate(glm::vec3(3, 0, 0));
+	  }
+	  else {
+		  ModelMatrices[i] = glm::translate(glm::vec3(4, 0, 0));
+	  }*/
+	 glUniformMatrix4fv(ModelMatrixId, 1, GL_FALSE, glm::value_ptr(ModelMatrices[i]));
+	 Meshes[i]->draw();
+  }
+  
+ /* SquareMesh->draw();
   TriangleMesh->draw();
-  ParallelogramMesh->draw();
+  ParallelogramMesh->draw();*/
 
   Shaders->unbind();
 }
@@ -153,6 +184,43 @@ void MyApp::windowSizeCallback(GLFWwindow *win, int winx, int winy) {
 }
 
 void MyApp::displayCallback(GLFWwindow *win, double elapsed) { drawScene(); }
+
+void MyApp::keyCallback(GLFWwindow* win, int key, int scancode, int action, int mods) {
+	/*if (key == GLFW_KEY_ESCAPE && action == GLFW_PRESS) {
+		glfwSetWindowShouldClose(win, GLFW_TRUE);
+	}*/
+	//std::cout << "key: " << key << " scancode: " << scancode << " action: " << action << " mods: " << mods << std::endl;
+	switch (action){
+	case 1:
+		switch (key){
+		case 80: //P
+			//switch projection of current camera
+			if (Camera->getProjectionMatrix() == ProjectionMatrix1) {
+				Camera->setProjectionMatrix(ProjectionMatrix2);
+			}
+			else {
+				Camera->setProjectionMatrix(ProjectionMatrix1);
+			}
+			break;
+		case 67: //C
+			//switch camera (view)
+			if (Camera->getViewMatrix() == ViewMatrix1) {
+				Camera->setViewMatrix(ViewMatrix2);
+			}
+			else {
+				Camera->setViewMatrix(ViewMatrix1);
+			}
+			break;
+		case 262: //right arrow key
+			//animate the meshes to one configuration
+			break;
+		case 263: //left arrow key
+			//animate the meshes to other configuration
+			break;
+		}
+		break;
+	}
+}
 
 /////////////////////////////////////////////////////////////////////////// MAIN
 
