@@ -23,6 +23,7 @@ class MyApp : public mgl::App {
   void displayCallback(GLFWwindow *win, double elapsed) override;
   void windowSizeCallback(GLFWwindow *win, int width, int height) override;
   void keyCallback(GLFWwindow* win, int key, int scancode, int action, int mods) override;
+  void scrollCallback(GLFWwindow* win, double xoffset, double yoffset);
 
  private:
   const GLuint UBO_BP = 0;
@@ -131,6 +132,8 @@ const glm::mat4 ProjectionMatrix1 =
 const glm::mat4 ProjectionMatrix2 =
     glm::perspective(glm::radians(30.0f), 640.0f / 480.0f, 1.0f, 10.0f);
 
+glm::mat4 CurrentMatrix = ViewMatrix1;
+
 void MyApp::createCamera() {
   Camera = new mgl::Camera(UBO_BP);
   Camera->setViewMatrix(ViewMatrix1);
@@ -204,11 +207,13 @@ void MyApp::keyCallback(GLFWwindow* win, int key, int scancode, int action, int 
 			break;
 		case 67: //C
 			//switch camera (view)
-			if (Camera->getViewMatrix() == ViewMatrix1) {
+			if (CurrentMatrix == ViewMatrix1) {
 				Camera->setViewMatrix(ViewMatrix2);
+				CurrentMatrix = ViewMatrix2;
 			}
 			else {
 				Camera->setViewMatrix(ViewMatrix1);
+				CurrentMatrix = ViewMatrix1;
 			}
 			break;
 		case 262: //right arrow key
@@ -221,6 +226,26 @@ void MyApp::keyCallback(GLFWwindow* win, int key, int scancode, int action, int 
 		break;
 	}
 }
+
+void MyApp::scrollCallback(GLFWwindow* win, double xoffset, double yoffset) {
+	// Zoom factor: adjust this value for smoother zooming
+	const float zoomSpeed = 0.5f;
+
+	// Get the current view matrix and camera position
+	glm::mat4 viewMatrix = Camera->getViewMatrix();
+	glm::vec3 cameraPosition = glm::vec3(glm::inverse(viewMatrix)[3]);
+	glm::vec3 center(0.0f, 0.0f, 0.0f);  // Center of the scene
+
+	// Calculate the direction vector
+	glm::vec3 direction = glm::normalize(center - cameraPosition);
+
+	// Adjust the camera position based on scroll input
+	cameraPosition += static_cast<float>(yoffset) * zoomSpeed * direction;
+
+	// Update the view matrix
+	Camera->setViewMatrix(glm::lookAt(cameraPosition, center, glm::vec3(0.0f, 1.0f, 0.0f)));
+}
+
 
 /////////////////////////////////////////////////////////////////////////// MAIN
 
