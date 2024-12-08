@@ -132,7 +132,9 @@ const glm::mat4 ProjectionMatrix1 =
 const glm::mat4 ProjectionMatrix2 =
     glm::perspective(glm::radians(30.0f), 640.0f / 480.0f, 1.0f, 10.0f);
 
-glm::mat4 CurrentMatrix = ViewMatrix1;
+glm::mat4 CurrentViewMatrix1 = ViewMatrix1;
+glm::mat4 CurrentViewMatrix2 = ViewMatrix2;
+bool CurrentCam = true;
 
 void MyApp::createCamera() {
   Camera = new mgl::Camera(UBO_BP);
@@ -207,13 +209,13 @@ void MyApp::keyCallback(GLFWwindow* win, int key, int scancode, int action, int 
 			break;
 		case 67: //C
 			//switch camera (view)
-			if (CurrentMatrix == ViewMatrix1) {
-				Camera->setViewMatrix(ViewMatrix2);
-				CurrentMatrix = ViewMatrix2;
+			if (CurrentCam) {
+				Camera->setViewMatrix(CurrentViewMatrix2);
+				CurrentCam = false;
 			}
 			else {
-				Camera->setViewMatrix(ViewMatrix1);
-				CurrentMatrix = ViewMatrix1;
+				Camera->setViewMatrix(CurrentViewMatrix1);
+				CurrentCam = true;
 			}
 			break;
 		case 262: //right arrow key
@@ -242,8 +244,16 @@ void MyApp::scrollCallback(GLFWwindow* win, double xoffset, double yoffset) {
 	// Adjust the camera position based on scroll input
 	cameraPosition += static_cast<float>(yoffset) * zoomSpeed * direction;
 
-	// Update the view matrix
-	Camera->setViewMatrix(glm::lookAt(cameraPosition, center, glm::vec3(0.0f, 1.0f, 0.0f)));
+	if (CurrentViewMatrix1 == Camera->getViewMatrix()) {
+		// Update the view matrix
+		Camera->setViewMatrix(glm::lookAt(cameraPosition, center, glm::vec3(0.0f, 1.0f, 0.0f)));
+		CurrentViewMatrix1 = Camera->getViewMatrix();
+	}
+	else {
+		Camera->setViewMatrix(glm::lookAt(cameraPosition, center, glm::vec3(0.0f, 1.0f, 0.0f)));
+		CurrentViewMatrix2 = Camera->getViewMatrix();
+	}
+
 }
 
 
