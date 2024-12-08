@@ -17,6 +17,82 @@
 
 ////////////////////////////////////////////////////////////////////////// MYAPP
 
+class Node {
+public:
+	mgl::Mesh* mesh;
+	mgl::ShaderProgram* shader;
+	glm::mat4 modelMatrix;
+	GLint modelMatrixId;
+
+	Node(mgl::Mesh* mesh, const glm::mat4& modelMatrix)
+		: mesh(mesh), shader(shader), modelMatrix(modelMatrix) {}
+
+	void createShaderProgram() {
+		shader = new mgl::ShaderProgram();
+		shader->addShader(GL_VERTEX_SHADER, "cube-vs.glsl");
+		shader->addShader(GL_FRAGMENT_SHADER, "cube-fs.glsl");
+
+		shader->addAttribute(mgl::POSITION_ATTRIBUTE, mgl::Mesh::POSITION);
+		shader->addAttribute(mgl::NORMAL_ATTRIBUTE, mgl::Mesh::NORMAL);
+
+		shader->addAttribute(mgl::TEXCOORD_ATTRIBUTE, mgl::Mesh::TEXCOORD);
+
+		shader->addAttribute(mgl::TANGENT_ATTRIBUTE, mgl::Mesh::TANGENT);
+
+		shader->addUniform(mgl::MODEL_MATRIX);
+		shader->addUniformBlock(mgl::CAMERA_BLOCK, 0);
+		shader->create();
+
+		modelMatrixId = shader->Uniforms[mgl::MODEL_MATRIX].index;
+	}
+
+	void translate(const glm::vec3& translation) {
+		modelMatrix = glm::translate(modelMatrix, translation);
+	}
+
+	void rotate(float angle, const glm::vec3& axis) {
+		modelMatrix = glm::rotate(modelMatrix, glm::radians(angle), axis);
+	}
+
+	void scale(const glm::vec3& scale) {
+		modelMatrix = glm::scale(modelMatrix, scale);
+	}
+
+	void resetModelMatrix() {
+		modelMatrix = glm::mat4(1.0f);
+	}
+};
+
+class SceneGraph {
+public:
+	std::vector<Node> nodes;
+
+	void addNode(const Node& node) {
+		nodes.push_back(node);
+	}
+
+	void draw() {
+		for (const auto& node : nodes) {
+			node.shader->bind();
+			glUniformMatrix4fv(node.modelMatrixId, 1, GL_FALSE, glm::value_ptr(node.modelMatrix));
+			node.mesh->draw();
+			node.shader->unbind();
+		}
+	}
+
+	void createShaderPrograms() {
+		for (auto& node : nodes) {
+			node.createShaderProgram();
+		}
+	}
+	void resetNodesTransformations() {
+		for (auto& node : nodes) {
+			node.resetModelMatrix();
+		}
+	}
+
+};
+
 class MyApp : public mgl::App {
  public:
   void initCallback(GLFWwindow *win) override;
@@ -33,8 +109,9 @@ class MyApp : public mgl::App {
   mgl::Mesh* SquareMesh = nullptr;
   mgl::Mesh* TriangleMesh = nullptr;
   mgl::Mesh* ParallelogramMesh = nullptr;
-  std::vector<mgl::Mesh*> Meshes;
-  std::vector<glm::mat4> ModelMatrices;
+  //std::vector<mgl::Mesh*> Meshes;
+  //std::vector<glm::mat4> ModelMatrices;
+  SceneGraph sceneGraph;
 
   void createMeshes();
   void createShaderPrograms();
@@ -46,18 +123,6 @@ class MyApp : public mgl::App {
 
 void MyApp::createMeshes() {
   std::string mesh_dir = "assets/";
-  // std::string mesh_file = "cube-v.obj";
-  // std::string mesh_file = "cube-vn-flat.obj";
-  // std::string mesh_file = "cube-vn-smooth.obj";
-  // std::string mesh_file = "cube-vt.obj";
-  // std::string mesh_file = "cube-vt2.obj";
-  // std::string mesh_file = "torus-vtn-flat.obj";
-  // std::string mesh_file = "torus-vtn-smooth.obj";
-  // std::string mesh_file = "suzanne-vtn-flat.obj";
-  // std::string mesh_file = "suzanne-vtn-smooth.obj";
-  // std::string mesh_file = "teapot-vn-flat.obj";
-  // std::string mesh_file = "teapot-vn-smooth.obj";
-  // std::string mesh_file = "bunny-vn-flat.obj";
   std::string mesh_file = "square.obj";
   std::string mesh_file2 = "parallelogram.obj";
   std::string mesh_file3 = "triangle.obj";
@@ -66,48 +131,51 @@ void MyApp::createMeshes() {
   SquareMesh = new mgl::Mesh();
   SquareMesh->joinIdenticalVertices();
   SquareMesh->create(mesh_fullname);
-  Meshes.push_back(SquareMesh);
+  //Meshes.push_back(SquareMesh);
+  sceneGraph.addNode(Node(SquareMesh, glm::mat4(1.0f)));
 
   mesh_fullname = mesh_dir + mesh_file2;
   ParallelogramMesh = new mgl::Mesh();
   ParallelogramMesh->joinIdenticalVertices();
   ParallelogramMesh->create(mesh_fullname);
-  Meshes.push_back(ParallelogramMesh);
+  //Meshes.push_back(ParallelogramMesh);
+  sceneGraph.addNode(Node(ParallelogramMesh, glm::mat4(1.0f)));
 
   mesh_fullname = mesh_dir + mesh_file3;
-  for (uint16_t i = 0; i < 5; i++) {
-	  //ModelMatrices.push_back(glm::translate(glm::vec3(i, 0, 0)));
+  
 	  TriangleMesh = new mgl::Mesh();
 	  TriangleMesh->joinIdenticalVertices();
 	  TriangleMesh->create(mesh_fullname);
-	  Meshes.push_back(TriangleMesh);
+	  //Meshes.push_back(TriangleMesh);
+  for (uint16_t i = 0; i < 5; i++) {
+	sceneGraph.addNode(Node(TriangleMesh, glm::mat4(1.0f)));
   }
-  ModelMatrices.resize(Meshes.size(), glm::mat4(1.0f));
+  //ModelMatrices.resize(Meshes.size(), glm::mat4(1.0f));
 }
 
 ///////////////////////////////////////////////////////////////////////// SHADER
 
 void MyApp::createShaderPrograms() {
-  Shaders = new mgl::ShaderProgram();
+  /*Shaders = new mgl::ShaderProgram();
   Shaders->addShader(GL_VERTEX_SHADER, "cube-vs.glsl");
   Shaders->addShader(GL_FRAGMENT_SHADER, "cube-fs.glsl");
 
   Shaders->addAttribute(mgl::POSITION_ATTRIBUTE, mgl::Mesh::POSITION);
-  if (SquareMesh->hasNormals()) {
-    Shaders->addAttribute(mgl::NORMAL_ATTRIBUTE, mgl::Mesh::NORMAL);
-  }
-  if (SquareMesh->hasTexcoords()) {
-    Shaders->addAttribute(mgl::TEXCOORD_ATTRIBUTE, mgl::Mesh::TEXCOORD);
-  }
-  if (SquareMesh->hasTangentsAndBitangents()) {
-    Shaders->addAttribute(mgl::TANGENT_ATTRIBUTE, mgl::Mesh::TANGENT);
-  }
+  Shaders->addAttribute(mgl::NORMAL_ATTRIBUTE, mgl::Mesh::NORMAL);
+  
+  Shaders->addAttribute(mgl::TEXCOORD_ATTRIBUTE, mgl::Mesh::TEXCOORD);
+  
+  
+  Shaders->addAttribute(mgl::TANGENT_ATTRIBUTE, mgl::Mesh::TANGENT);
+  
 
   Shaders->addUniform(mgl::MODEL_MATRIX);
   Shaders->addUniformBlock(mgl::CAMERA_BLOCK, UBO_BP);
   Shaders->create();
 
-  ModelMatrixId = Shaders->Uniforms[mgl::MODEL_MATRIX].index;
+  ModelMatrixId = Shaders->Uniforms[mgl::MODEL_MATRIX].index;*/
+
+	sceneGraph.createShaderPrograms();
 }
 
 ///////////////////////////////////////////////////////////////////////// CAMERA
@@ -134,7 +202,9 @@ const glm::mat4 ProjectionMatrix2 =
 
 glm::mat4 CurrentViewMatrix1 = ViewMatrix1;
 glm::mat4 CurrentViewMatrix2 = ViewMatrix2;
-bool CurrentCam = true;
+int CurrentCam = 1;
+glm::mat4 CurrentProjectionMatrix1 = ProjectionMatrix2;
+glm::mat4 CurrentProjectionMatrix2 = ProjectionMatrix2;
 
 void MyApp::createCamera() {
   Camera = new mgl::Camera(UBO_BP);
@@ -144,43 +214,28 @@ void MyApp::createCamera() {
 
 /////////////////////////////////////////////////////////////////////////// DRAW
 
-glm::mat4 ModelMatrix(1.0f);
+//glm::mat4 ModelMatrix(1.0f);
 
 void MyApp::drawScene() {
-  Shaders->bind();
-  for (uint16_t i = 0; i < 7; i++) {
-	  /*if (i == 3) {
-		  ModelMatrices[i] = glm::translate(glm::vec3(0, 0, 0));
-	  }
-	  else if (i == 4) {
-		  ModelMatrices[i] = glm::translate(glm::vec3(1, 0, 0));
-	  }
-	  else if (i == 5) {
-		  ModelMatrices[i] = glm::translate(glm::vec3(2, 0, 0));
-	  }
-	  else if (i == 6) {
-		  ModelMatrices[i] = glm::translate(glm::vec3(3, 0, 0));
-	  }
-	  else {
-		  ModelMatrices[i] = glm::translate(glm::vec3(4, 0, 0));
-	  }*/
-	 glUniformMatrix4fv(ModelMatrixId, 1, GL_FALSE, glm::value_ptr(ModelMatrices[i]));
-	 Meshes[i]->draw();
-  }
-  
- /* SquareMesh->draw();
-  TriangleMesh->draw();
-  ParallelogramMesh->draw();*/
-
-  Shaders->unbind();
+	/*Shaders->bind();
+	for (uint16_t i = 0; i < 7; i++) {
+		glUniformMatrix4fv(ModelMatrixId, 1, GL_FALSE, glm::value_ptr(ModelMatrices[i]));
+		Meshes[i]->draw();
+	}
+	Shaders->unbind();*/
+	
+	//sceneGraph.nodes[2].translate(glm::vec3(0.0f, 0.5f, 0.0f));
+	sceneGraph.nodes[0].translate(glm::vec3(0.0f, 0.1f, 0.0f));
+	sceneGraph.draw();
+	sceneGraph.resetNodesTransformations();
 }
 
 ////////////////////////////////////////////////////////////////////// CALLBACKS
 
 void MyApp::initCallback(GLFWwindow *win) {
-  createMeshes();
-  createShaderPrograms();  // after mesh;
-  createCamera();
+	createMeshes();
+	createShaderPrograms();
+	createCamera();
 }
 
 void MyApp::windowSizeCallback(GLFWwindow *win, int winx, int winy) {
@@ -209,13 +264,15 @@ void MyApp::keyCallback(GLFWwindow* win, int key, int scancode, int action, int 
 			break;
 		case 67: //C
 			//switch camera (view)
-			if (CurrentCam) {
+			if (CurrentCam==1) {
 				Camera->setViewMatrix(CurrentViewMatrix2);
-				CurrentCam = false;
+				//Camera->setProjectionMatrix(CurrentProjectionMatrix2);
+				CurrentCam = 0;
 			}
 			else {
 				Camera->setViewMatrix(CurrentViewMatrix1);
-				CurrentCam = true;
+				//Camera->setProjectionMatrix(CurrentProjectionMatrix1);
+				CurrentCam = 1;
 			}
 			break;
 		case 262: //right arrow key
