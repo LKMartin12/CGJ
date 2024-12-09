@@ -182,12 +182,12 @@ void MyApp::createShaderPrograms() {
 
 // Eye(5,5,5) Center(0,0,0) Up(0,1,0)
 const glm::mat4 ViewMatrix1 =
-    glm::lookAt(glm::vec3(0.0f, 5.0f, 5.0f), glm::vec3(0.0f, 0.0f, 0.0f),
+    glm::lookAt(glm::vec3(5.0f, 0.2f, 0.1f), glm::vec3(0.0f, 0.0f, 0.0f),
                 glm::vec3(0.0f, 1.0f, 0.0f));
 
 // Eye(-5,-5,-5) Center(0,0,0) Up(0,1,0)
 const glm::mat4 ViewMatrix2 =
-    glm::lookAt(glm::vec3(0.0f, 5.0f, -5.0f), glm::vec3(0.0f, 0.0f, 0.0f),
+    glm::lookAt(glm::vec3(5.0f, 0.2f, -5.0f), glm::vec3(0.0f, 0.0f, 0.0f),
                 glm::vec3(0.0f, 1.0f, 0.0f));
 
 // Orthographic LeftRight(-2,2) BottomTop(-2,2) NearFar(1,10) 
@@ -225,7 +225,26 @@ void MyApp::drawScene() {
 	Shaders->unbind();*/
 	
 	//sceneGraph.nodes[2].translate(glm::vec3(0.0f, 0.5f, 0.0f));
-	sceneGraph.nodes[0].translate(glm::vec3(0.0f, 0.1f, 0.0f));
+	sceneGraph.nodes[0].translate(glm::vec3(0.0f, 0.69f, -0.30f));
+	sceneGraph.nodes[0].rotate(20.0f, glm::vec3(1.0f, 0.0f, 0.0f));
+	sceneGraph.nodes[0].scale(glm::vec3(1.0f, 0.6f, 0.6f));
+	sceneGraph.nodes[1].translate(glm::vec3(0.0f, -0.38f, -0.1f));
+	sceneGraph.nodes[1].scale(glm::vec3(1.0f, 0.7f, 0.7f));
+	sceneGraph.nodes[2].translate(glm::vec3(0.0f, -0.58f, 0.1f));
+	sceneGraph.nodes[2].rotate(90.0f ,glm::vec3(1.0f, 0.0f, 0.0f));
+	sceneGraph.nodes[2].scale(glm::vec3(1.0f, 0.5f, 0.5f));
+	sceneGraph.nodes[3].translate(glm::vec3(0.0f, -0.51f, -0.25f));
+	sceneGraph.nodes[3].rotate(135.0f, glm::vec3(1.0f, 0.0f, 0.0f));
+	sceneGraph.nodes[3].scale(glm::vec3(1.0f, 0.5f, 0.5f));
+	sceneGraph.nodes[4].translate(glm::vec3(0.0f, 0.45f, -0.10f));
+	sceneGraph.nodes[4].rotate(45.0f, glm::vec3(1.0f, 0.0f, 0.0f));
+	sceneGraph.nodes[4].scale(glm::vec3(1.0f, 0.73f, 0.73f));
+	sceneGraph.nodes[5].translate(glm::vec3(0.0f, 1.0f, 0.46f));
+	sceneGraph.nodes[5].rotate(60.0f, glm::vec3(1.0f, 0.0f, 0.0f));
+	sceneGraph.nodes[5].scale(glm::vec3(1.0f, 1.0f, 1.0f));
+	sceneGraph.nodes[6].translate(glm::vec3(0.0f, 0.31f, 0.86f));
+	sceneGraph.nodes[6].rotate(150.0f, glm::vec3(1.0f, 0.0f, 0.0f));
+	sceneGraph.nodes[6].scale(glm::vec3(1.0f, 1.0f, 1.0f));
 	sceneGraph.draw();
 	sceneGraph.resetNodesTransformations();
 }
@@ -320,7 +339,7 @@ int main(int argc, char *argv[]) {
   mgl::Engine &engine = mgl::Engine::getInstance();
   engine.setApp(new MyApp());
   engine.setOpenGL(4, 6);
-  engine.setWindow(800, 600, "Mesh Loader", 0, 1);
+  engine.setWindow(800, 600, "Tangram 3D Group 11", 0, 1);
   engine.init();
   engine.run();
   exit(EXIT_SUCCESS);
