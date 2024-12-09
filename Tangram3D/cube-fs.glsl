@@ -5,7 +5,7 @@ in vec2 exTexcoord;
 in vec3 exNormal;
 
 out vec4 FragmentColor;
-
+uniform vec3 givenColor;
 vec3 constantColor(void) {
     return vec3(0.5);
 }
@@ -19,7 +19,10 @@ vec3 uvColor(void) {
 }
 
 vec3 normalColor(void) {
-    return (exNormal + vec3(1.0)) * 0.5;
+    vec3 N = normalize(exNormal);
+    vec3 dir = normalize(vec3(1.0, 0.5, 0.5));
+    float intensity = max(dot(N, dir), 0.0); // Calculate the intensity based on the normal
+    return givenColor * intensity; // Adjust the original
 }
 
 vec3 diffuseColor(void) {

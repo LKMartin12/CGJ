@@ -23,6 +23,8 @@ public:
 	mgl::ShaderProgram* shader;
 	glm::mat4 modelMatrix;
 	GLint modelMatrixId;
+	GLint colorId;
+	glm::vec3 color;
 
 	Node(mgl::Mesh* mesh, const glm::mat4& modelMatrix)
 		: mesh(mesh), shader(shader), modelMatrix(modelMatrix) {}
@@ -40,9 +42,11 @@ public:
 		shader->addAttribute(mgl::TANGENT_ATTRIBUTE, mgl::Mesh::TANGENT);
 
 		shader->addUniform(mgl::MODEL_MATRIX);
+		shader->addUniform("givenColor");
 		shader->addUniformBlock(mgl::CAMERA_BLOCK, 0);
 		shader->create();
 
+		colorId = shader->Uniforms["givenColor"].index;
 		modelMatrixId = shader->Uniforms[mgl::MODEL_MATRIX].index;
 	}
 
@@ -61,6 +65,10 @@ public:
 	void resetModelMatrix() {
 		modelMatrix = glm::mat4(1.0f);
 	}
+
+	void setColor(const glm::vec3& color) {
+		this->color = color;
+	}
 };
 
 class SceneGraph {
@@ -74,6 +82,7 @@ public:
 	void draw() {
 		for (const auto& node : nodes) {
 			node.shader->bind();
+			glUniform3fv(node.colorId, 1, glm::value_ptr(node.color));
 			glUniformMatrix4fv(node.modelMatrixId, 1, GL_FALSE, glm::value_ptr(node.modelMatrix));
 			node.mesh->draw();
 			node.shader->unbind();
@@ -89,6 +98,10 @@ public:
 		for (auto& node : nodes) {
 			node.resetModelMatrix();
 		}
+	}
+
+	void setNodeColor(int index ,const glm::vec3& color) {
+		this->nodes[index].setColor(color);
 	}
 
 };
@@ -133,6 +146,7 @@ void MyApp::createMeshes() {
   SquareMesh->create(mesh_fullname);
   //Meshes.push_back(SquareMesh);
   sceneGraph.addNode(Node(SquareMesh, glm::mat4(1.0f)));
+  sceneGraph.setNodeColor(0, glm::vec3(0.0f, 0.6f, 0.0f)); //square color (green)	
 
   mesh_fullname = mesh_dir + mesh_file2;
   ParallelogramMesh = new mgl::Mesh();
@@ -140,6 +154,8 @@ void MyApp::createMeshes() {
   ParallelogramMesh->create(mesh_fullname);
   //Meshes.push_back(ParallelogramMesh);
   sceneGraph.addNode(Node(ParallelogramMesh, glm::mat4(1.0f)));
+  sceneGraph.setNodeColor(1, glm::vec3(1.0f, 0.647f, 0.0f)); //paralelogram color (orange)
+  
 
   mesh_fullname = mesh_dir + mesh_file3;
   
@@ -149,6 +165,21 @@ void MyApp::createMeshes() {
 	  //Meshes.push_back(TriangleMesh);
   for (uint16_t i = 0; i < 5; i++) {
 	sceneGraph.addNode(Node(TriangleMesh, glm::mat4(1.0f)));
+	if (i == 0) {
+		sceneGraph.setNodeColor(i + 2, glm::vec3(0.376f, 0.482f, 0.745f)); //small triangle 1 color (greyed-blue)
+	}
+	else if (i == 1) {
+		sceneGraph.setNodeColor(i + 2, glm::vec3(1.000, 0.271, 0.0)); //small triangle 2 color (orange-red)
+	}
+	else if (i == 2) {
+		sceneGraph.setNodeColor(i + 2, glm::vec3(0.502f, 0.0f, 0.502f)); //mid-size triangle color (purple)
+	}
+	else if (i == 3) {
+		sceneGraph.setNodeColor(i + 2, glm::vec3(0.275f, 0.460f, 0.806f)); //big triangle 1 color (blue)
+	}
+	else if (i == 4) {
+		sceneGraph.setNodeColor(i + 2, glm::vec3(0.780f, 0.082f, 0.522f)); //big triangle 2 color (pink-red)
+	}
   }
   //ModelMatrices.resize(Meshes.size(), glm::mat4(1.0f));
 }
@@ -224,7 +255,7 @@ void MyApp::drawScene() {
 	}
 	Shaders->unbind();*/
 	
-	//sceneGraph.nodes[2].translate(glm::vec3(0.0f, 0.5f, 0.0f));
+	//sceneGraph.nodes[0].setColor(glm::vec3(0.0f, 0.6f, 0.0f)); //square color (green)
 	sceneGraph.nodes[0].translate(glm::vec3(0.0f, 0.69f, -0.30f));
 	sceneGraph.nodes[0].rotate(20.0f, glm::vec3(1.0f, 0.0f, 0.0f));
 	sceneGraph.nodes[0].scale(glm::vec3(1.0f, 0.6f, 0.6f));
