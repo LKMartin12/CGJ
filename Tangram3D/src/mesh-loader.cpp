@@ -130,6 +130,14 @@ class MyApp : public mgl::App {
   void createShaderPrograms();
   void createCamera();
   void drawScene();
+
+  float animationProgress = 0.0f; // Progress of the animation (0.0 to 1.0)
+  bool isAnimating = false;       // Is animation running 
+  float animationSpeed = 0.5f;    // Speed of the animation
+  bool isLeftKeyPressed = false;
+  bool isRightKeyPressed = false;
+  glm::mat4 startMatrix;
+  glm::mat4 endMatrix;
 };
 
 ///////////////////////////////////////////////////////////////////////// MESHES
@@ -218,7 +226,7 @@ const glm::mat4 ViewMatrix1 =
 
 // Eye(-5,-5,-5) Center(0,0,0) Up(0,1,0)
 const glm::mat4 ViewMatrix2 =
-    glm::lookAt(glm::vec3(5.0f, 0.2f, -5.0f), glm::vec3(0.0f, 0.0f, 0.0f),
+    glm::lookAt(glm::vec3(0.0f, 0.2f, 5.0f), glm::vec3(0.0f, 0.0f, 0.0f),
                 glm::vec3(0.0f, 1.0f, 0.0f));
 
 // Orthographic LeftRight(-2,2) BottomTop(-2,2) NearFar(1,10) 
@@ -231,11 +239,92 @@ const glm::mat4 ProjectionMatrix1 =
 const glm::mat4 ProjectionMatrix2 =
     glm::perspective(glm::radians(30.0f), 640.0f / 480.0f, 1.0f, 10.0f);
 
+std::vector<glm::mat4> figureModelMatrices = {
+		glm::mat4(1.0f)*
+		glm::translate(glm::vec3(0.0f, 0.69f, -0.30f))*
+		glm::rotate(glm::radians(20.0f), glm::vec3(1.0f, 0.0f, 0.0f))*
+		glm::scale(glm::vec3(1.0f, 0.6f, 0.6f)),
+
+		glm::mat4(1.0f)*
+		glm::translate(glm::vec3(0.0f, -0.38f, -0.1f))*
+		glm::scale(glm::vec3(1.0f, 0.7f, 0.7f)),
+
+		glm::mat4(1.0f)*
+		glm::translate(glm::vec3(0.0f, -0.58f, 0.1f))*
+		glm::rotate(glm::radians(90.0f), glm::vec3(1.0f, 0.0f, 0.0f))*
+		glm::scale(glm::vec3(1.0f, 0.51f, 0.51f)),
+
+		glm::mat4(1.0f)*
+		glm::translate(glm::vec3(0.0f, -0.51f, -0.25f))*
+		glm::rotate(glm::radians(135.0f), glm::vec3(1.0f, 0.0f, 0.0f))*
+		glm::scale(glm::vec3(1.0f, 0.5f, 0.5f)),
+
+		glm::mat4(1.0f)*
+		glm::translate(glm::vec3(0.0f, 0.45f, -0.10f))*
+		glm::rotate(glm::radians(45.0f), glm::vec3(1.0f, 0.0f, 0.0f))*
+		glm::scale(glm::vec3(1.0f, 0.73f, 0.73f)),
+
+		glm::mat4(1.0f)*
+		glm::translate(glm::vec3(0.0f, 1.0f, 0.46f))*
+		glm::rotate(glm::radians(60.0f), glm::vec3(1.0f, 0.0f, 0.0f)),
+
+		glm::mat4(1.0f)*
+		glm::translate(glm::vec3(0.0f, 0.31f, 0.86f))*
+		glm::rotate(glm::radians(150.0f), glm::vec3(1.0f, 0.0f, 0.0f))
+};
+
+std::vector<glm::mat4> boxModelMatrices = {
+	glm::mat4(1.0f) *
+	glm::rotate(glm::radians(-90.0f), glm::vec3(0.0f, 1.0f, 0.0f)) * 
+	glm::translate(glm::vec3(0.0f, -0.20f, 0.033f)) *
+	glm::rotate(glm::radians(45.0f), glm::vec3(1.0f, 0.0f, 0.0f)) *
+	glm::scale(glm::vec3(1.0f, 0.685f, 0.685f)),
+
+	glm::mat4(1.0f) *
+	glm::rotate(glm::radians(-90.0f), glm::vec3(0.0f, 1.0f, 0.0f)) * 
+	glm::translate(glm::vec3(0.0f, 0.09f, 0.33f)) *
+	glm::rotate(glm::radians(45.0f), glm::vec3(1.0f, 0.0f, 0.0f)) *
+	glm::scale(glm::vec3(1.0f, 0.7f, 0.7f)),
+
+	glm::mat4(1.0f) *
+	glm::rotate(glm::radians(-90.0f), glm::vec3(0.0f, 1.0f, 0.0f)) * 
+	glm::translate(glm::vec3(0.0f, 0.09f, 0.325f)) *
+	glm::rotate(glm::radians(135.0f), glm::vec3(1.0f, 0.0f, 0.0f)) *
+	glm::scale(glm::vec3(1.0f, 0.515f, 0.51f)),
+
+	glm::mat4(1.0f) *
+	glm::rotate(glm::radians(-90.0f), glm::vec3(0.0f, 1.0f, 0.0f)) * 
+	glm::translate(glm::vec3(0.0f, -0.49f, -0.265f)) *
+	glm::rotate(glm::radians(225.0f), glm::vec3(1.0f, 0.0f, 0.0f)) *
+	glm::scale(glm::vec3(1.0f, 0.515f, 0.515f)),
+
+	glm::mat4(1.0f) *
+	glm::rotate(glm::radians(-90.0f), glm::vec3(0.0f, 1.0f, 0.0f)) * 
+	glm::translate(glm::vec3(0.0f, -0.20f, 0.335f)) *
+	glm::scale(glm::vec3(1.0f, 0.73f, 0.73f)),
+
+	glm::mat4(1.0f) *
+	glm::rotate(glm::radians(-90.0f), glm::vec3(0.0f, 1.0f, 0.0f)) * 
+	glm::translate(glm::vec3(0.0f, 0.695f, 0.035f)) *
+	glm::rotate(glm::radians(45.0f), glm::vec3(1.0f, 0.0f, 0.0f)) *
+	glm::scale(glm::vec3(1.0f, 1.05f, 1.05f)),
+
+	glm::mat4(1.0f) *
+	glm::rotate(glm::radians(-90.0f), glm::vec3(0.0f, 1.0f, 0.0f)) * 
+	glm::translate(glm::vec3(0.0f, 0.10f, -0.565f)) *
+	glm::rotate(glm::radians(-45.0f), glm::vec3(1.0f, 0.0f, 0.0f)) *
+	glm::scale(glm::vec3(1.0f, 1.05f, 1.05f))
+};
+
+
+
+
 glm::mat4 CurrentViewMatrix1 = ViewMatrix1;
 glm::mat4 CurrentViewMatrix2 = ViewMatrix2;
 int CurrentCam = 1;
 glm::mat4 CurrentProjectionMatrix1 = ProjectionMatrix2;
 glm::mat4 CurrentProjectionMatrix2 = ProjectionMatrix2;
+std::vector<glm::mat4> CurrentModelMatrix;
 
 void MyApp::createCamera() {
   Camera = new mgl::Camera(UBO_BP);
@@ -247,6 +336,43 @@ void MyApp::createCamera() {
 
 //glm::mat4 ModelMatrix(1.0f);
 
+glm::mat4 static interpolateMatrices(glm::mat4& start, glm::mat4& end, float t) {
+	// Extract translation
+	glm::vec3 startTranslation(start[3][0], start[3][1], start[3][2]);
+	glm::vec3 endTranslation(end[3][0], end[3][1], end[3][2]);
+
+	// Interpolate translation
+	glm::vec3 interpolatedTranslation = glm::mix(startTranslation, endTranslation, t);
+
+	// Interpolate rotation (normalize to ensure consistency)
+	glm::quat startRotation = glm::normalize(glm::quat_cast(start));
+	glm::quat endRotation = glm::normalize(glm::quat_cast(end));
+	glm::quat interpolatedRotation = glm::slerp(startRotation, endRotation, t);
+
+	// Interpolate scale (ensure uniform scaling)
+	glm::vec3 startScale(
+		glm::length(glm::vec3(start[0][0], start[1][0], start[2][0])),
+		glm::length(glm::vec3(start[0][1], start[1][1], start[2][1])),
+		glm::length(glm::vec3(start[0][2], start[1][2], start[2][2]))
+	);
+	glm::vec3 endScale(
+		glm::length(glm::vec3(end[0][0], end[1][0], end[2][0])),
+		glm::length(glm::vec3(end[0][1], end[1][1], end[2][1])),
+		glm::length(glm::vec3(end[0][2], end[1][2], end[2][2]))
+	);
+	glm::vec3 interpolatedScale = glm::mix(startScale, endScale, t);
+
+	// Combine the interpolated components into a single matrix
+	glm::mat4 translationMatrix = glm::translate(interpolatedTranslation);
+	glm::mat4 rotationMatrix = glm::mat4_cast(interpolatedRotation);
+	glm::mat4 scaleMatrix = glm::scale(interpolatedScale);
+
+	return translationMatrix * rotationMatrix * scaleMatrix;
+}
+
+
+
+
 void MyApp::drawScene() {
 	/*Shaders->bind();
 	for (uint16_t i = 0; i < 7; i++) {
@@ -256,26 +382,65 @@ void MyApp::drawScene() {
 	Shaders->unbind();*/
 	
 	//sceneGraph.nodes[0].setColor(glm::vec3(0.0f, 0.6f, 0.0f)); //square color (green)
-	sceneGraph.nodes[0].translate(glm::vec3(0.0f, 0.69f, -0.30f));
-	sceneGraph.nodes[0].rotate(20.0f, glm::vec3(1.0f, 0.0f, 0.0f));
-	sceneGraph.nodes[0].scale(glm::vec3(1.0f, 0.6f, 0.6f));
-	sceneGraph.nodes[1].translate(glm::vec3(0.0f, -0.38f, -0.1f));
-	sceneGraph.nodes[1].scale(glm::vec3(1.0f, 0.7f, 0.7f));
-	sceneGraph.nodes[2].translate(glm::vec3(0.0f, -0.58f, 0.1f));
-	sceneGraph.nodes[2].rotate(90.0f ,glm::vec3(1.0f, 0.0f, 0.0f));
-	sceneGraph.nodes[2].scale(glm::vec3(1.0f, 0.5f, 0.5f));
-	sceneGraph.nodes[3].translate(glm::vec3(0.0f, -0.51f, -0.25f));
-	sceneGraph.nodes[3].rotate(135.0f, glm::vec3(1.0f, 0.0f, 0.0f));
-	sceneGraph.nodes[3].scale(glm::vec3(1.0f, 0.5f, 0.5f));
-	sceneGraph.nodes[4].translate(glm::vec3(0.0f, 0.45f, -0.10f));
-	sceneGraph.nodes[4].rotate(45.0f, glm::vec3(1.0f, 0.0f, 0.0f));
-	sceneGraph.nodes[4].scale(glm::vec3(1.0f, 0.73f, 0.73f));
-	sceneGraph.nodes[5].translate(glm::vec3(0.0f, 1.0f, 0.46f));
-	sceneGraph.nodes[5].rotate(60.0f, glm::vec3(1.0f, 0.0f, 0.0f));
-	sceneGraph.nodes[5].scale(glm::vec3(1.0f, 1.0f, 1.0f));
-	sceneGraph.nodes[6].translate(glm::vec3(0.0f, 0.31f, 0.86f));
-	sceneGraph.nodes[6].rotate(150.0f, glm::vec3(1.0f, 0.0f, 0.0f));
-	sceneGraph.nodes[6].scale(glm::vec3(1.0f, 1.0f, 1.0f));
+
+
+	/*for (size_t i = 0; i < figureModelMatrices.size(); ++i) {
+		sceneGraph.nodes[i].modelMatrix = boxModelMatrices[i];
+	}*/
+	if (!isAnimating) {
+		// If animation is not active, set nodes directly based on progress
+		for (size_t i = 0; i < figureModelMatrices.size(); ++i) {
+			if (animationProgress <= 0.0f) {
+				// At figure configuration
+				sceneGraph.nodes[i].modelMatrix = figureModelMatrices[i];
+			}
+			else if (animationProgress >= 1.0f) {
+				// At box configuration
+				sceneGraph.nodes[i].modelMatrix = boxModelMatrices[i];
+			}
+		}
+	}
+	else {
+
+		if (isLeftKeyPressed) {
+			float delta = animationSpeed * 0.016f; // Assuming ~60 FPS
+			animationProgress += delta;
+			if (animationProgress >= 1.0f) {
+				animationProgress = 1.0f;
+				isAnimating = false; // Stop animation
+			}
+		}
+		else if (isRightKeyPressed) {
+			float delta = animationSpeed * 0.016f; // Assuming ~60 FPS
+			animationProgress -= delta;
+			if (animationProgress <= 0.0f) {
+				animationProgress = 0.0f;
+				isAnimating = false; // Stop animation
+			}
+		}
+		std::cout << "AnimationProgress: " << animationProgress << std::endl;
+
+		// Interpolate model matrices based on animationProgress
+		for (size_t i = 0; i < figureModelMatrices.size(); ++i) {
+			if (isLeftKeyPressed) {
+				std::cout << "Vai para a caixa" << std::endl;
+				startMatrix = figureModelMatrices[i];
+				endMatrix = boxModelMatrices[i];
+				sceneGraph.nodes[i].modelMatrix = interpolateMatrices(startMatrix, endMatrix, animationProgress);
+			}
+			else if (isRightKeyPressed) {
+				std::cout << "Vai para a figura" << std::endl;
+				startMatrix = boxModelMatrices[i];
+				endMatrix = figureModelMatrices[i];
+				sceneGraph.nodes[i].modelMatrix = interpolateMatrices(startMatrix, endMatrix, 1 - animationProgress);
+			}
+			else {
+				sceneGraph.nodes[i].modelMatrix = CurrentModelMatrix[i];
+			}
+			CurrentModelMatrix[i] = sceneGraph.nodes[i].modelMatrix;
+		}
+	}
+
 	sceneGraph.draw();
 	sceneGraph.resetNodesTransformations();
 }
@@ -286,6 +451,8 @@ void MyApp::initCallback(GLFWwindow *win) {
 	createMeshes();
 	createShaderPrograms();
 	createCamera();
+
+	CurrentModelMatrix.resize(figureModelMatrices.size(), glm::mat4(1.0f));
 }
 
 void MyApp::windowSizeCallback(GLFWwindow *win, int winx, int winy) {
@@ -296,15 +463,10 @@ void MyApp::windowSizeCallback(GLFWwindow *win, int winx, int winy) {
 void MyApp::displayCallback(GLFWwindow *win, double elapsed) { drawScene(); }
 
 void MyApp::keyCallback(GLFWwindow* win, int key, int scancode, int action, int mods) {
-	/*if (key == GLFW_KEY_ESCAPE && action == GLFW_PRESS) {
-		glfwSetWindowShouldClose(win, GLFW_TRUE);
-	}*/
-	//std::cout << "key: " << key << " scancode: " << scancode << " action: " << action << " mods: " << mods << std::endl;
-	switch (action){
-	case 1:
-		switch (key){
-		case 80: //P
-			//switch projection of current camera
+	switch (action) {
+	case GLFW_PRESS:
+		switch (key) {
+		case GLFW_KEY_P: // Switch projection of the current camera
 			if (Camera->getProjectionMatrix() == ProjectionMatrix1) {
 				Camera->setProjectionMatrix(ProjectionMatrix2);
 			}
@@ -312,29 +474,48 @@ void MyApp::keyCallback(GLFWwindow* win, int key, int scancode, int action, int 
 				Camera->setProjectionMatrix(ProjectionMatrix1);
 			}
 			break;
-		case 67: //C
-			//switch camera (view)
-			if (CurrentCam==1) {
+
+		case GLFW_KEY_C: // Switch camera (view)
+			if (CurrentCam == 1) {
 				Camera->setViewMatrix(CurrentViewMatrix2);
-				//Camera->setProjectionMatrix(CurrentProjectionMatrix2);
 				CurrentCam = 0;
 			}
 			else {
 				Camera->setViewMatrix(CurrentViewMatrix1);
-				//Camera->setProjectionMatrix(CurrentProjectionMatrix1);
 				CurrentCam = 1;
 			}
 			break;
-		case 262: //right arrow key
-			//animate the meshes to one configuration
+
+		case GLFW_KEY_LEFT: // Start animation towards the box
+			if (animationProgress != 1.0f) {
+				isLeftKeyPressed = true;
+				isAnimating = true; // Enable animation
+			}
 			break;
-		case 263: //left arrow key
-			//animate the meshes to other configuration
+
+		case GLFW_KEY_RIGHT: // Start animation towards the figure
+			if (animationProgress != 0.0f) {
+				isRightKeyPressed = true;
+				isAnimating = true; // Enable animation
+			}
+			break;
+		}
+		break;
+
+	case GLFW_RELEASE:
+		switch (key) {
+		case GLFW_KEY_LEFT:
+			isLeftKeyPressed = false; // Stop tracking the left key
+			break;
+
+		case GLFW_KEY_RIGHT:
+			isRightKeyPressed = false; // Stop tracking the right key
 			break;
 		}
 		break;
 	}
 }
+
 
 void MyApp::scrollCallback(GLFWwindow* win, double xoffset, double yoffset) {
 	// Zoom factor: adjust this value for smoother zooming
