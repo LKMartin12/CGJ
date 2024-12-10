@@ -200,25 +200,6 @@ void MyApp::createMeshes() {
 ///////////////////////////////////////////////////////////////////////// SHADER
 
 void MyApp::createShaderPrograms() {
-  /*Shaders = new mgl::ShaderProgram();
-  Shaders->addShader(GL_VERTEX_SHADER, "cube-vs.glsl");
-  Shaders->addShader(GL_FRAGMENT_SHADER, "cube-fs.glsl");
-
-  Shaders->addAttribute(mgl::POSITION_ATTRIBUTE, mgl::Mesh::POSITION);
-  Shaders->addAttribute(mgl::NORMAL_ATTRIBUTE, mgl::Mesh::NORMAL);
-  
-  Shaders->addAttribute(mgl::TEXCOORD_ATTRIBUTE, mgl::Mesh::TEXCOORD);
-  
-  
-  Shaders->addAttribute(mgl::TANGENT_ATTRIBUTE, mgl::Mesh::TANGENT);
-  
-
-  Shaders->addUniform(mgl::MODEL_MATRIX);
-  Shaders->addUniformBlock(mgl::CAMERA_BLOCK, UBO_BP);
-  Shaders->create();
-
-  ModelMatrixId = Shaders->Uniforms[mgl::MODEL_MATRIX].index;*/
-
 	sceneGraph.createShaderPrograms();
 }
 
@@ -327,14 +308,14 @@ std::vector<glm::mat4> boxModelMatrices = {
 glm::mat4 CurrentViewMatrix1 = ViewMatrix1;
 glm::mat4 CurrentViewMatrix2 = ViewMatrix2;
 int CurrentCam = 1;
-glm::mat4 CurrentProjectionMatrix1 = ProjectionMatrix2;
+glm::mat4 CurrentProjectionMatrix1 = ProjectionMatrix1;
 glm::mat4 CurrentProjectionMatrix2 = ProjectionMatrix2;
 std::vector<glm::mat4> CurrentModelMatrix;
 
 void MyApp::createCamera() {
   Camera = new mgl::Camera(UBO_BP);
   Camera->setViewMatrix(ViewMatrix1);
-  Camera->setProjectionMatrix(ProjectionMatrix2);
+  Camera->setProjectionMatrix(CurrentProjectionMatrix2);
 }
 
 /////////////////////////////////////////////////////////////////////////// DRAW
@@ -379,19 +360,6 @@ glm::mat4 static interpolateMatrices(glm::mat4& start, glm::mat4& end, float t) 
 
 
 void MyApp::drawScene() {
-	/*Shaders->bind();
-	for (uint16_t i = 0; i < 7; i++) {
-		glUniformMatrix4fv(ModelMatrixId, 1, GL_FALSE, glm::value_ptr(ModelMatrices[i]));
-		Meshes[i]->draw();
-	}
-	Shaders->unbind();*/
-	
-	//sceneGraph.nodes[0].setColor(glm::vec3(0.0f, 0.6f, 0.0f)); //square color (green)
-
-
-	/*for (size_t i = 0; i < figureModelMatrices.size(); ++i) {
-		sceneGraph.nodes[i].modelMatrix = boxModelMatrices[i];
-	}*/
 	if (!isAnimating) {
 		// If animation is not active, set nodes directly based on progress
 		for (size_t i = 0; i < figureModelMatrices.size(); ++i) {
@@ -463,6 +431,21 @@ void MyApp::initCallback(GLFWwindow *win) {
 void MyApp::windowSizeCallback(GLFWwindow *win, int winx, int winy) {
   glViewport(0, 0, winx, winy);
   // change projection matrices to maintain aspect ratio
+
+  float aspectRatio = static_cast<float>(winx) / static_cast<float>(winy);
+
+  if (CurrentProjectionMatrix1 == Camera->getProjectionMatrix()) {
+	  std::cout << "Orthographic resize" << std::endl;
+	  CurrentProjectionMatrix1 = glm::ortho(-2.0f*aspectRatio, 2.0f*aspectRatio, -2.0f*aspectRatio, 2.0f*aspectRatio, 1.0f*aspectRatio, 10.0f*aspectRatio);
+	  Camera->setProjectionMatrix(CurrentProjectionMatrix1);
+  }
+  else {
+	  std::cout << "Perspective resize" << std::endl;
+	  CurrentProjectionMatrix2 = glm::perspective(glm::radians(30.0f), aspectRatio, 1.0f, 10.0f);
+	  Camera->setProjectionMatrix(CurrentProjectionMatrix2);
+  }
+
+  
 }
 
 void MyApp::displayCallback(GLFWwindow *win, double elapsed) { drawScene(); }
@@ -492,14 +475,14 @@ void MyApp::keyCallback(GLFWwindow* win, int key, int scancode, int action, int 
 			break;
 
 		case GLFW_KEY_LEFT: // Start animation towards the box
-			if (animationProgress != 1.0f) {
+			if (animationProgress != 1.0f && !isRightKeyPressed) {
 				isLeftKeyPressed = true;
 				isAnimating = true; // Enable animation
 			}
 			break;
 
 		case GLFW_KEY_RIGHT: // Start animation towards the figure
-			if (animationProgress != 0.0f) {
+			if (animationProgress != 0.0f && !isLeftKeyPressed) {
 				isRightKeyPressed = true;
 				isAnimating = true; // Enable animation
 			}
@@ -561,45 +544,9 @@ void MyApp::mouseButtonCallback(GLFWwindow* win, int button, int action, int mod
 }
 
 void MyApp::rotateCamera(float angleX, float angleY) {
-	//glm::quat q_x = glm::angleAxis(angleX, glm::vec3(0.0f, 1.0f, 0.0f));
-	//int cam = 0;
-	//glm::mat4 cameraView = Camera->getViewMatrix();
-
-	//if (cameraView == CurrentViewMatrix1) {
-	//	cam = 1;
-	//}
-	//else {
-	//	cam = 2;
-	//}
-
-	//glm::vec3 camDirection = glm::normalize(glm::vec3(cameraView[1][0], cameraView[1][1], cameraView[1][2]) - glm::vec3(cameraView[0][0], cameraView[0][1], cameraView[0][2]));
-	////std::cout << "cameraView: " << glm::to_string(cameraView) << std::endl;
-	//glm::vec3 cam_right = glm::normalize(glm::cross(camDirection, glm::vec3(0.0f, 1.0f, 0.0f)));
-	//glm::quat q_y = glm::angleAxis(angleY, cam_right);
-
-	//glm::quat q = q_x * q_y;
-
-	//cameraView[0] = q * cameraView[0];
-	//Camera->setViewMatrix(glm::lookAt(glm::vec3(cameraView[0][0], cameraView[0][1], cameraView[0][2]), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f)));
-
-	//if (cam == 1) {
-	//	CurrentViewMatrix1 = Camera->getViewMatrix();
-	//}
-	//else {
-	//	CurrentViewMatrix2 = Camera->getViewMatrix();
-	//}
-
-	int cam = 0;
 	glm::mat4 cameraView = Camera->getViewMatrix();
 	glm::vec3 cameraPosition = glm::vec3(glm::inverse(cameraView)[3]);
 	glm::vec3 center = glm::vec3(0.0f, 0.0f, 0.0f);
-
-	if (cameraView == CurrentViewMatrix1) {
-		cam = 1;
-	}
-	else {
-		cam = 2;
-	}
 
 	glm::quat q_x = glm::angleAxis(angleX, glm::vec3(0.0f, 1.0f, 0.0f));
 	glm::vec3 camDirection = glm::normalize(center - cameraPosition);
@@ -609,8 +556,7 @@ void MyApp::rotateCamera(float angleX, float angleY) {
 
 	cameraPosition = q * cameraPosition;
 	Camera->setViewMatrix(glm::lookAt(cameraPosition, center, glm::vec3(0.0f, 1.0f, 0.0f)));
-
-	if (cam == 1) {
+	if (CurrentCam == 1) {
 		CurrentViewMatrix1 = Camera->getViewMatrix();
 	}
 	else {
