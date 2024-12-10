@@ -137,7 +137,6 @@ class MyApp : public mgl::App {
   void rotateCamera(float angleX, float angleY);
 
   float animationProgress = 0.0f; // Progress of the animation (0.0 to 1.0)
-  bool isAnimating = false;       // Is animation running 
   float animationSpeed = 0.5f;    // Speed of the animation
   bool isLeftKeyPressed = false;
   bool isRightKeyPressed = false;
@@ -320,100 +319,62 @@ void MyApp::createCamera() {
 
 /////////////////////////////////////////////////////////////////////////// DRAW
 
-//glm::mat4 ModelMatrix(1.0f);
+glm::mat4 interpolateMatrices(const glm::mat4& start, const glm::mat4& end, float t) {
+	glm::vec3 startTranslation, startScale, startSkew;
+	glm::quat startRotation;
+	glm::vec4 startPerspective;
+	glm::decompose(start, startScale, startRotation, startTranslation, startSkew, startPerspective);
 
-glm::mat4 static interpolateMatrices(glm::mat4& start, glm::mat4& end, float t) {
-	// Extract translation
-	glm::vec3 startTranslation(start[3][0], start[3][1], start[3][2]);
-	glm::vec3 endTranslation(end[3][0], end[3][1], end[3][2]);
+	glm::vec3 endTranslation, endScale, endSkew;
+	glm::quat endRotation;
+	glm::vec4 endPerspective;
+	glm::decompose(end, endScale, endRotation, endTranslation, endSkew, endPerspective);
 
-	// Interpolate translation
-	glm::vec3 interpolatedTranslation = glm::mix(startTranslation, endTranslation, t);
+	glm::vec3 interpTranslation = glm::mix(startTranslation, endTranslation, t);
+	glm::vec3 interpScale = glm::mix(startScale, endScale, t);
+	glm::quat interpRotation = glm::slerp(startRotation, endRotation, t);
 
-	// Interpolate rotation (normalize to ensure consistency)
-	glm::quat startRotation = glm::normalize(glm::quat_cast(start));
-	glm::quat endRotation = glm::normalize(glm::quat_cast(end));
-	glm::quat interpolatedRotation = glm::slerp(startRotation, endRotation, t);
-
-	// Interpolate scale (ensure uniform scaling)
-	glm::vec3 startScale(
-		glm::length(glm::vec3(start[0][0], start[1][0], start[2][0])),
-		glm::length(glm::vec3(start[0][1], start[1][1], start[2][1])),
-		glm::length(glm::vec3(start[0][2], start[1][2], start[2][2]))
-	);
-	glm::vec3 endScale(
-		glm::length(glm::vec3(end[0][0], end[1][0], end[2][0])),
-		glm::length(glm::vec3(end[0][1], end[1][1], end[2][1])),
-		glm::length(glm::vec3(end[0][2], end[1][2], end[2][2]))
-	);
-	glm::vec3 interpolatedScale = glm::mix(startScale, endScale, t);
-
-	// Combine the interpolated components into a single matrix
-	glm::mat4 translationMatrix = glm::translate(interpolatedTranslation);
-	glm::mat4 rotationMatrix = glm::mat4_cast(interpolatedRotation);
-	glm::mat4 scaleMatrix = glm::scale(interpolatedScale);
-
-	return translationMatrix * rotationMatrix * scaleMatrix;
+	return glm::translate(interpTranslation) * glm::mat4_cast(interpRotation) * glm::scale(interpScale);
 }
 
 
-
-
 void MyApp::drawScene() {
-	if (!isAnimating) {
-		// If animation is not active, set nodes directly based on progress
-		for (size_t i = 0; i < figureModelMatrices.size(); ++i) {
-			if (animationProgress <= 0.0f) {
-				// At figure configuration
-				sceneGraph.nodes[i].modelMatrix = figureModelMatrices[i];
-			}
-			else if (animationProgress >= 1.0f) {
-				// At box configuration
-				sceneGraph.nodes[i].modelMatrix = boxModelMatrices[i];
-			}
+	if (isLeftKeyPressed) {
+		float delta = animationSpeed * 0.01f; // Assuming ~60 FPS
+		std::cout << "Delta: " << delta << std::endl;
+		animationProgress += delta;
+		if (animationProgress >= 1.0f) {
+			animationProgress = 1.0f;
 		}
 	}
-	else {
-
-		if (isLeftKeyPressed) {
-			float delta = animationSpeed * 0.016f; // Assuming ~60 FPS
-			animationProgress += delta;
-			if (animationProgress >= 1.0f) {
-				animationProgress = 1.0f;
-				isAnimating = false; // Stop animation
-			}
-		}
-		else if (isRightKeyPressed) {
-			float delta = animationSpeed * 0.016f; // Assuming ~60 FPS
-			animationProgress -= delta;
-			if (animationProgress <= 0.0f) {
-				animationProgress = 0.0f;
-				isAnimating = false; // Stop animation
-			}
-		}
-		//std::cout << "AnimationProgress: " << animationProgress << std::endl;
-
-		// Interpolate model matrices based on animationProgress
-		for (size_t i = 0; i < figureModelMatrices.size(); ++i) {
-			if (isLeftKeyPressed) {
-				//std::cout << "Vai para a caixa" << std::endl;
-				startMatrix = figureModelMatrices[i];
-				endMatrix = boxModelMatrices[i];
-				sceneGraph.nodes[i].modelMatrix = interpolateMatrices(startMatrix, endMatrix, animationProgress);
-			}
-			else if (isRightKeyPressed) {
-				//std::cout << "Vai para a figura" << std::endl;
-				startMatrix = boxModelMatrices[i];
-				endMatrix = figureModelMatrices[i];
-				sceneGraph.nodes[i].modelMatrix = interpolateMatrices(startMatrix, endMatrix, 1 - animationProgress);
-			}
-			else {
-				sceneGraph.nodes[i].modelMatrix = CurrentModelMatrix[i];
-			}
-			CurrentModelMatrix[i] = sceneGraph.nodes[i].modelMatrix;
+	else if (isRightKeyPressed) {
+		float delta = animationSpeed * 0.01f; // Assuming ~60 FPS
+		animationProgress -= delta;
+		if (animationProgress <= 0.0f) {
+			animationProgress = 0.0f;
 		}
 	}
-
+	std::cout << "AnimationProgress: " << animationProgress << std::endl;
+	
+	// Interpolate model matrices based on animationProgress
+	for (size_t i = 0; i < figureModelMatrices.size(); i++) {
+		if (isLeftKeyPressed || animationProgress == 0.0f) {
+			//std::cout << "Vai para a caixa" << std::endl;
+			startMatrix = figureModelMatrices[i];
+			endMatrix = boxModelMatrices[i];
+			sceneGraph.nodes[i].modelMatrix = interpolateMatrices(startMatrix, endMatrix, animationProgress);
+		}
+		else if (isRightKeyPressed || animationProgress == 1.0f) {
+			//std::cout << "Vai para a figura" << std::endl;
+			startMatrix = boxModelMatrices[i];
+			endMatrix = figureModelMatrices[i];
+			sceneGraph.nodes[i].modelMatrix = interpolateMatrices(startMatrix, endMatrix, 1 - animationProgress);
+		}
+		else {
+			sceneGraph.nodes[i].modelMatrix = CurrentModelMatrix[i];
+		}
+		CurrentModelMatrix[i] = sceneGraph.nodes[i].modelMatrix;
+	}
 	sceneGraph.draw();
 	sceneGraph.resetNodesTransformations();
 }
@@ -477,14 +438,12 @@ void MyApp::keyCallback(GLFWwindow* win, int key, int scancode, int action, int 
 		case GLFW_KEY_LEFT: // Start animation towards the box
 			if (animationProgress != 1.0f && !isRightKeyPressed) {
 				isLeftKeyPressed = true;
-				isAnimating = true; // Enable animation
 			}
 			break;
 
 		case GLFW_KEY_RIGHT: // Start animation towards the figure
 			if (animationProgress != 0.0f && !isLeftKeyPressed) {
 				isRightKeyPressed = true;
-				isAnimating = true; // Enable animation
 			}
 			break;
 		}
