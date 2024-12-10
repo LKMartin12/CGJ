@@ -113,6 +113,8 @@ class MyApp : public mgl::App {
   void windowSizeCallback(GLFWwindow *win, int width, int height) override;
   void keyCallback(GLFWwindow* win, int key, int scancode, int action, int mods) override;
   void scrollCallback(GLFWwindow* win, double xoffset, double yoffset);
+  void mouseButtonCallback(GLFWwindow* win, int button, int action, int mods) override;
+  void cursorCallback(GLFWwindow* win, double xpos, double ypos) override;
 
  private:
   const GLuint UBO_BP = 0;
@@ -125,11 +127,14 @@ class MyApp : public mgl::App {
   //std::vector<mgl::Mesh*> Meshes;
   //std::vector<glm::mat4> ModelMatrices;
   SceneGraph sceneGraph;
+  bool rotatingView = false;
+  double mouse_x, mouse_y;
 
   void createMeshes();
   void createShaderPrograms();
   void createCamera();
   void drawScene();
+  void rotateCamera(float angleX, float angleY);
 
   float animationProgress = 0.0f; // Progress of the animation (0.0 to 1.0)
   bool isAnimating = false;       // Is animation running 
@@ -418,18 +423,18 @@ void MyApp::drawScene() {
 				isAnimating = false; // Stop animation
 			}
 		}
-		std::cout << "AnimationProgress: " << animationProgress << std::endl;
+		//std::cout << "AnimationProgress: " << animationProgress << std::endl;
 
 		// Interpolate model matrices based on animationProgress
 		for (size_t i = 0; i < figureModelMatrices.size(); ++i) {
 			if (isLeftKeyPressed) {
-				std::cout << "Vai para a caixa" << std::endl;
+				//std::cout << "Vai para a caixa" << std::endl;
 				startMatrix = figureModelMatrices[i];
 				endMatrix = boxModelMatrices[i];
 				sceneGraph.nodes[i].modelMatrix = interpolateMatrices(startMatrix, endMatrix, animationProgress);
 			}
 			else if (isRightKeyPressed) {
-				std::cout << "Vai para a figura" << std::endl;
+				//std::cout << "Vai para a figura" << std::endl;
 				startMatrix = boxModelMatrices[i];
 				endMatrix = figureModelMatrices[i];
 				sceneGraph.nodes[i].modelMatrix = interpolateMatrices(startMatrix, endMatrix, 1 - animationProgress);
@@ -541,6 +546,92 @@ void MyApp::scrollCallback(GLFWwindow* win, double xoffset, double yoffset) {
 		Camera->setViewMatrix(glm::lookAt(cameraPosition, center, glm::vec3(0.0f, 1.0f, 0.0f)));
 		CurrentViewMatrix2 = Camera->getViewMatrix();
 	}
+
+}
+
+void MyApp::mouseButtonCallback(GLFWwindow* win, int button, int action, int mods) {
+	if (button == GLFW_MOUSE_BUTTON_LEFT && action == GLFW_PRESS) {
+		glfwGetCursorPos(win, &mouse_x, &mouse_y);
+		rotatingView = true;
+	}
+	else if (button == GLFW_MOUSE_BUTTON_LEFT && action == GLFW_RELEASE) {
+		rotatingView = false;
+	}
+	
+}
+
+void MyApp::rotateCamera(float angleX, float angleY) {
+	//glm::quat q_x = glm::angleAxis(angleX, glm::vec3(0.0f, 1.0f, 0.0f));
+	//int cam = 0;
+	//glm::mat4 cameraView = Camera->getViewMatrix();
+
+	//if (cameraView == CurrentViewMatrix1) {
+	//	cam = 1;
+	//}
+	//else {
+	//	cam = 2;
+	//}
+
+	//glm::vec3 camDirection = glm::normalize(glm::vec3(cameraView[1][0], cameraView[1][1], cameraView[1][2]) - glm::vec3(cameraView[0][0], cameraView[0][1], cameraView[0][2]));
+	////std::cout << "cameraView: " << glm::to_string(cameraView) << std::endl;
+	//glm::vec3 cam_right = glm::normalize(glm::cross(camDirection, glm::vec3(0.0f, 1.0f, 0.0f)));
+	//glm::quat q_y = glm::angleAxis(angleY, cam_right);
+
+	//glm::quat q = q_x * q_y;
+
+	//cameraView[0] = q * cameraView[0];
+	//Camera->setViewMatrix(glm::lookAt(glm::vec3(cameraView[0][0], cameraView[0][1], cameraView[0][2]), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f)));
+
+	//if (cam == 1) {
+	//	CurrentViewMatrix1 = Camera->getViewMatrix();
+	//}
+	//else {
+	//	CurrentViewMatrix2 = Camera->getViewMatrix();
+	//}
+
+	int cam = 0;
+	glm::mat4 cameraView = Camera->getViewMatrix();
+	glm::vec3 cameraPosition = glm::vec3(glm::inverse(cameraView)[3]);
+	glm::vec3 center = glm::vec3(0.0f, 0.0f, 0.0f);
+
+	if (cameraView == CurrentViewMatrix1) {
+		cam = 1;
+	}
+	else {
+		cam = 2;
+	}
+
+	glm::quat q_x = glm::angleAxis(angleX, glm::vec3(0.0f, 1.0f, 0.0f));
+	glm::vec3 camDirection = glm::normalize(center - cameraPosition);
+	glm::vec3 cam_right = glm::normalize(glm::cross(camDirection, glm::vec3(0.0f, 1.0f, 0.0f)));
+	glm::quat q_y = glm::angleAxis(angleY, cam_right);
+	glm::quat q = q_x * q_y;
+
+	cameraPosition = q * cameraPosition;
+	Camera->setViewMatrix(glm::lookAt(cameraPosition, center, glm::vec3(0.0f, 1.0f, 0.0f)));
+
+	if (cam == 1) {
+		CurrentViewMatrix1 = Camera->getViewMatrix();
+	}
+	else {
+		CurrentViewMatrix2 = Camera->getViewMatrix();
+	}
+}
+
+void MyApp::cursorCallback(GLFWwindow* win, double xpos, double ypos) {
+	if (!rotatingView) return;
+
+	const double sensitivity = 0.005f;
+	double dx = xpos - mouse_x;
+	double dy = ypos - mouse_y;
+
+	mouse_x = xpos;
+	mouse_y = ypos;
+
+	float angleX = static_cast<float>(-dx * sensitivity) ;
+	float angleY = static_cast<float>(-dy * sensitivity) ;
+
+	rotateCamera(angleX, angleY);
 
 }
 

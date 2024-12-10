@@ -22,7 +22,9 @@ vec3 normalColor(void) {
     vec3 N = normalize(exNormal);
     vec3 dir = normalize(vec3(1.0, 0.5, 0.5));
     float intensity = max(dot(N, dir), 0.0); // Calculate the intensity based on the normal
-    return givenColor * intensity; // Adjust the original
+    float minIntensity = 0.2; // Minimum intensity to avoid completely black faces
+    intensity = mix(minIntensity, 1.0, intensity); // Adjust the intensity to ensure a minimum value
+    return givenColor * intensity; // Adjust the original color based on the intensity
 }
 
 vec3 diffuseColor(void) {
