@@ -262,19 +262,19 @@ std::vector<glm::mat4> figureModelMatrices = {
 std::vector<glm::mat4> boxModelMatrices = {
 	glm::mat4(1.0f) *
 	glm::rotate(glm::radians(-90.0f), glm::vec3(0.0f, 1.0f, 0.0f)) * 
-	glm::translate(glm::vec3(0.0f, -0.20f, 0.033f)) *
+	glm::translate(glm::vec3(0.0f, -0.195f, 0.033f)) *
 	glm::rotate(glm::radians(45.0f), glm::vec3(1.0f, 0.0f, 0.0f)) *
-	glm::scale(glm::vec3(1.0f, 0.685f, 0.685f)),
+	glm::scale(glm::vec3(1.0f, 0.695f, 0.695f)),
 
 	glm::mat4(1.0f) *
 	glm::rotate(glm::radians(-90.0f), glm::vec3(0.0f, 1.0f, 0.0f)) * 
-	glm::translate(glm::vec3(0.0f, 0.09f, 0.33f)) *
+	glm::translate(glm::vec3(0.0f, 0.095f, 0.325f)) *
 	glm::rotate(glm::radians(45.0f), glm::vec3(1.0f, 0.0f, 0.0f)) *
 	glm::scale(glm::vec3(1.0f, 0.7f, 0.7f)),
 
 	glm::mat4(1.0f) *
 	glm::rotate(glm::radians(-90.0f), glm::vec3(0.0f, 1.0f, 0.0f)) * 
-	glm::translate(glm::vec3(0.0f, 0.09f, 0.325f)) *
+	glm::translate(glm::vec3(0.0f, 0.1f, 0.325f)) *
 	glm::rotate(glm::radians(135.0f), glm::vec3(1.0f, 0.0f, 0.0f)) *
 	glm::scale(glm::vec3(1.0f, 0.515f, 0.51f)),
 
@@ -286,7 +286,7 @@ std::vector<glm::mat4> boxModelMatrices = {
 
 	glm::mat4(1.0f) *
 	glm::rotate(glm::radians(-90.0f), glm::vec3(0.0f, 1.0f, 0.0f)) * 
-	glm::translate(glm::vec3(0.0f, -0.20f, 0.335f)) *
+	glm::translate(glm::vec3(0.0f, -0.20f, 0.325f)) *
 	glm::scale(glm::vec3(1.0f, 0.73f, 0.73f)),
 
 	glm::mat4(1.0f) *
