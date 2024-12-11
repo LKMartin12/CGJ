@@ -341,21 +341,21 @@ glm::mat4 interpolateMatrices(const glm::mat4& start, const glm::mat4& end, floa
 
 void MyApp::drawScene() {
 	if (isLeftKeyPressed) {
-		float delta = animationSpeed * 0.01f; // Assuming ~60 FPS
-		std::cout << "Delta: " << delta << std::endl;
+		float delta = animationSpeed * 0.01f;
+		//std::cout << "Delta: " << delta << std::endl;
 		animationProgress += delta;
 		if (animationProgress >= 1.0f) {
 			animationProgress = 1.0f;
 		}
 	}
 	else if (isRightKeyPressed) {
-		float delta = animationSpeed * 0.01f; // Assuming ~60 FPS
+		float delta = animationSpeed * 0.01f; // 
 		animationProgress -= delta;
 		if (animationProgress <= 0.0f) {
 			animationProgress = 0.0f;
 		}
 	}
-	std::cout << "AnimationProgress: " << animationProgress << std::endl;
+	//std::cout << "AnimationProgress: " << animationProgress << std::endl;
 	
 	// Interpolate model matrices based on animationProgress
 	for (size_t i = 0; i < figureModelMatrices.size(); i++) {
@@ -398,7 +398,7 @@ void MyApp::windowSizeCallback(GLFWwindow *win, int winx, int winy) {
 
   if (CurrentProjectionMatrix1 == Camera->getProjectionMatrix()) {
 	  std::cout << "Orthographic resize" << std::endl;
-	  CurrentProjectionMatrix1 = glm::ortho(-2.0f*aspectRatio, 2.0f*aspectRatio, -2.0f*aspectRatio, 2.0f*aspectRatio, 1.0f*aspectRatio, 10.0f*aspectRatio);
+	  CurrentProjectionMatrix1 = glm::ortho(-2.0f*aspectRatio, 2.0f*aspectRatio, -2.0f, 2.0f, 1.0f, 10.0f);
 	  Camera->setProjectionMatrix(CurrentProjectionMatrix1);
   }
   else {
@@ -417,11 +417,13 @@ void MyApp::keyCallback(GLFWwindow* win, int key, int scancode, int action, int 
 	case GLFW_PRESS:
 		switch (key) {
 		case GLFW_KEY_P: // Switch projection of the current camera
-			if (Camera->getProjectionMatrix() == ProjectionMatrix1) {
-				Camera->setProjectionMatrix(ProjectionMatrix2);
+			if (Camera->getProjectionMatrix() == CurrentProjectionMatrix1) {
+				//std::cout << "Switching to perspective projection" << std::endl;
+				Camera->setProjectionMatrix(CurrentProjectionMatrix2);
 			}
 			else {
-				Camera->setProjectionMatrix(ProjectionMatrix1);
+				//std::cout << "Switching to orthographic projection" << std::endl;
+				Camera->setProjectionMatrix(CurrentProjectionMatrix1);
 			}
 			break;
 
@@ -506,16 +508,18 @@ void MyApp::mouseButtonCallback(GLFWwindow* win, int button, int action, int mod
 void MyApp::rotateCamera(float angleX, float angleY) {
 	glm::mat4 cameraView = Camera->getViewMatrix();
 	glm::vec3 cameraPosition = glm::vec3(glm::inverse(cameraView)[3]);
+	glm::vec3 cameraUp = glm::vec3(glm::inverse(cameraView)[1]);
 	glm::vec3 center = glm::vec3(0.0f, 0.0f, 0.0f);
 
-	glm::quat q_x = glm::angleAxis(angleX, glm::vec3(0.0f, 1.0f, 0.0f));
+	glm::quat q_x = glm::angleAxis(angleX, cameraUp);
 	glm::vec3 camDirection = glm::normalize(center - cameraPosition);
-	glm::vec3 cam_right = glm::normalize(glm::cross(camDirection, glm::vec3(0.0f, 1.0f, 0.0f)));
+	glm::vec3 cam_right = glm::normalize(glm::cross(camDirection, cameraUp));
 	glm::quat q_y = glm::angleAxis(angleY, cam_right);
 	glm::quat q = q_x * q_y;
 
+	cameraUp = q * cameraUp;
 	cameraPosition = q * cameraPosition;
-	Camera->setViewMatrix(glm::lookAt(cameraPosition, center, glm::vec3(0.0f, 1.0f, 0.0f)));
+	Camera->setViewMatrix(glm::lookAt(cameraPosition, center, cameraUp));
 	if (CurrentCam == 1) {
 		CurrentViewMatrix1 = Camera->getViewMatrix();
 	}
