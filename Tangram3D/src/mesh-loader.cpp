@@ -30,6 +30,7 @@ public:
 	Node(mgl::Mesh* mesh, const glm::mat4& modelMatrix)
 		: mesh(mesh), shader(shader), modelMatrix(modelMatrix) {}
 
+	// Create and configure the shader
 	void createShaderProgram() {
 		shader = new mgl::ShaderProgram();
 		shader->addShader(GL_VERTEX_SHADER, "cube-vs.glsl");
@@ -51,6 +52,7 @@ public:
 		modelMatrixId = shader->Uniforms[mgl::MODEL_MATRIX].index;
 	}
 
+	// Transformations for the node
 	void translate(const glm::vec3& translation) {
 		modelMatrix = glm::translate(modelMatrix, translation);
 	}
@@ -125,8 +127,6 @@ class MyApp : public mgl::App {
   mgl::Mesh* SquareMesh = nullptr;
   mgl::Mesh* TriangleMesh = nullptr;
   mgl::Mesh* ParallelogramMesh = nullptr;
-  //std::vector<mgl::Mesh*> Meshes;
-  //std::vector<glm::mat4> ModelMatrices;
   SceneGraph sceneGraph;
   bool rotatingView = false;
   double mouse_x, mouse_y;
@@ -137,8 +137,10 @@ class MyApp : public mgl::App {
   void drawScene();
   void rotateCamera(float angleX, float angleY);
 
-  float animationProgress = 0.0f; // Progress of the animation (0.0 to 1.0)
-  float animationSpeed = 0.5f;    // Speed of the animation
+
+  // Animation variables for transitioning between two configurations
+  float animationProgress = 0.0f;
+  float animationSpeed = 0.5f;    
   bool isLeftKeyPressed = false;
   bool isRightKeyPressed = false;
   glm::mat4 startMatrix;
@@ -153,30 +155,33 @@ void MyApp::createMeshes() {
   std::string mesh_file = "square.obj";
   std::string mesh_file2 = "parallelogram.obj";
   std::string mesh_file3 = "triangle.obj";
-  //std::string mesh_file = "monkey-torus-vtn-flat.obj";
+
   std::string mesh_fullname = mesh_dir + mesh_file;
+
+  // Load square mesh
   SquareMesh = new mgl::Mesh();
   SquareMesh->joinIdenticalVertices();
   SquareMesh->create(mesh_fullname);
-  //Meshes.push_back(SquareMesh);
   sceneGraph.addNode(Node(SquareMesh, glm::mat4(1.0f)));
   sceneGraph.setNodeColor(0, glm::vec3(0.0f, 0.6f, 0.0f)); //square color (green)	
 
   mesh_fullname = mesh_dir + mesh_file2;
+
+  // Load parallelogram mesh
   ParallelogramMesh = new mgl::Mesh();
   ParallelogramMesh->joinIdenticalVertices();
   ParallelogramMesh->create(mesh_fullname);
-  //Meshes.push_back(ParallelogramMesh);
   sceneGraph.addNode(Node(ParallelogramMesh, glm::mat4(1.0f)));
   sceneGraph.setNodeColor(1, glm::vec3(1.0f, 0.647f, 0.0f)); //paralelogram color (orange)
   
 
   mesh_fullname = mesh_dir + mesh_file3;
   
-	  TriangleMesh = new mgl::Mesh();
-	  TriangleMesh->joinIdenticalVertices();
-	  TriangleMesh->create(mesh_fullname);
-	  //Meshes.push_back(TriangleMesh);
+  // Load triangle mesh and add several nodes of the same mesh with different colors
+  TriangleMesh = new mgl::Mesh();
+  TriangleMesh->joinIdenticalVertices();
+  TriangleMesh->create(mesh_fullname);
+
   for (uint16_t i = 0; i < 5; i++) {
 	sceneGraph.addNode(Node(TriangleMesh, glm::mat4(1.0f)));
 	if (i == 0) {
@@ -195,7 +200,6 @@ void MyApp::createMeshes() {
 		sceneGraph.setNodeColor(i + 2, glm::vec3(0.780f, 0.082f, 0.522f)); //big triangle 2 color (pink-red)
 	}
   }
-  //ModelMatrices.resize(Meshes.size(), glm::mat4(1.0f));
 }
 
 ///////////////////////////////////////////////////////////////////////// SHADER
@@ -206,105 +210,125 @@ void MyApp::createShaderPrograms() {
 
 ///////////////////////////////////////////////////////////////////////// CAMERA
 
-// Eye(5,5,5) Center(0,0,0) Up(0,1,0)
+// Eye(5, 0.2, 0.1)  Center(0, 0, 0)  Up(0, 1.0, 0)
 const glm::mat4 ViewMatrix1 =
     glm::lookAt(glm::vec3(5.0f, 0.2f, 0.1f), glm::vec3(0.0f, 0.0f, 0.0f),
                 glm::vec3(0.0f, 1.0f, 0.0f));
 
-// Eye(-5,-5,-5) Center(0,0,0) Up(0,1,0)
+// Eye(0.0, 0.2, 5.0)  Center(0, 0, 0)  Up(0, 1.0, 0)
 const glm::mat4 ViewMatrix2 =
     glm::lookAt(glm::vec3(0.0f, 0.2f, 5.0f), glm::vec3(0.0f, 0.0f, 0.0f),
                 glm::vec3(0.0f, 1.0f, 0.0f));
 
-// Orthographic LeftRight(-2,2) BottomTop(-2,2) NearFar(1,10) 
-//projection 0
+// Orthographic projection (ProjectionMatrix1)
 const glm::mat4 ProjectionMatrix1 =
     glm::ortho(-2.0f*(640.0f/480.0f), 2.0f*(640.0f/480.0f), -2.0f, 2.0f, 1.0f, 10.0f);
 
-// Perspective Fovy(30) Aspect(640/480) NearZ(1) FarZ(10)
-//projection 1
+// Perspective projection (ProjectionMatrix2)
 const glm::mat4 ProjectionMatrix2 =
     glm::perspective(glm::radians(30.0f), 640.0f / 480.0f, 1.0f, 10.0f);
 
+
+// These model matrices represent two different configurations (figure and box).
+// figureModelMatrices: positions/orientations for the "figure" configuration
+// boxModelMatrices: positions/orientations for the "box" configuration
+
 std::vector<glm::mat4> figureModelMatrices = {
-		glm::mat4(1.0f)*
-		glm::translate(glm::vec3(0.0f, 0.69f, -0.30f))*
-		glm::rotate(glm::radians(20.0f), glm::vec3(1.0f, 0.0f, 0.0f))*
-		glm::scale(glm::vec3(1.0f, 0.6f, 0.6f)),
 
-		glm::mat4(1.0f)*
-		glm::translate(glm::vec3(0.0f, -0.38f, -0.1f))*
-		glm::scale(glm::vec3(1.0f, 0.7f, 0.7f)),
+	// square
+	glm::mat4(1.0f)*
+	glm::translate(glm::vec3(0.0f, 0.69f, -0.30f))*
+	glm::rotate(glm::radians(20.0f), glm::vec3(1.0f, 0.0f, 0.0f))*
+	glm::scale(glm::vec3(1.0f, 0.6f, 0.6f)),
 
-		glm::mat4(1.0f)*
-		glm::translate(glm::vec3(0.0f, -0.58f, 0.1f))*
-		glm::rotate(glm::radians(90.0f), glm::vec3(1.0f, 0.0f, 0.0f))*
-		glm::scale(glm::vec3(1.0f, 0.51f, 0.51f)),
+	// parallelogram
+	glm::mat4(1.0f)*
+	glm::translate(glm::vec3(0.0f, -0.38f, -0.1f))*
+	glm::scale(glm::vec3(1.0f, 0.7f, 0.7f)),
 
-		glm::mat4(1.0f)*
-		glm::translate(glm::vec3(0.0f, -0.51f, -0.25f))*
-		glm::rotate(glm::radians(135.0f), glm::vec3(1.0f, 0.0f, 0.0f))*
-		glm::scale(glm::vec3(1.0f, 0.5f, 0.5f)),
+	// small triangle 1
+	glm::mat4(1.0f)*
+	glm::translate(glm::vec3(0.0f, -0.58f, 0.1f))*
+	glm::rotate(glm::radians(90.0f), glm::vec3(1.0f, 0.0f, 0.0f))*
+	glm::scale(glm::vec3(1.0f, 0.51f, 0.51f)),
 
-		glm::mat4(1.0f)*
-		glm::translate(glm::vec3(0.0f, 0.45f, -0.10f))*
-		glm::rotate(glm::radians(45.0f), glm::vec3(1.0f, 0.0f, 0.0f))*
-		glm::scale(glm::vec3(1.0f, 0.73f, 0.73f)),
+	// small triangle 2
+	glm::mat4(1.0f)*
+	glm::translate(glm::vec3(0.0f, -0.51f, -0.25f))*
+	glm::rotate(glm::radians(135.0f), glm::vec3(1.0f, 0.0f, 0.0f))*
+	glm::scale(glm::vec3(1.0f, 0.5f, 0.5f)),
 
-		glm::mat4(1.0f)*
-		glm::translate(glm::vec3(0.0f, 1.0f, 0.46f))*
-		glm::rotate(glm::radians(60.0f), glm::vec3(1.0f, 0.0f, 0.0f)),
+	// mid-size triangle
+	glm::mat4(1.0f)*
+	glm::translate(glm::vec3(0.0f, 0.45f, -0.10f))*
+	glm::rotate(glm::radians(45.0f), glm::vec3(1.0f, 0.0f, 0.0f))*
+	glm::scale(glm::vec3(1.0f, 0.73f, 0.73f)),
 
-		glm::mat4(1.0f)*
-		glm::translate(glm::vec3(0.0f, 0.31f, 0.86f))*
-		glm::rotate(glm::radians(150.0f), glm::vec3(1.0f, 0.0f, 0.0f))
+	// big triangle 1
+	glm::mat4(1.0f)*
+	glm::translate(glm::vec3(0.0f, 1.0f, 0.46f))*
+	glm::rotate(glm::radians(60.0f), glm::vec3(1.0f, 0.0f, 0.0f)),
+
+	// big triangle 2
+	glm::mat4(1.0f)*
+	glm::translate(glm::vec3(0.0f, 0.31f, 0.86f))*
+	glm::rotate(glm::radians(150.0f), glm::vec3(1.0f, 0.0f, 0.0f))
+
 };
 
 std::vector<glm::mat4> boxModelMatrices = {
-	glm::mat4(1.0f) *
-	glm::rotate(glm::radians(-90.0f), glm::vec3(0.0f, 1.0f, 0.0f)) * 
-	glm::translate(glm::vec3(0.0f, -0.195f, 0.033f)) *
-	glm::rotate(glm::radians(45.0f), glm::vec3(1.0f, 0.0f, 0.0f)) *
+
+	// square
+	glm::mat4(1.0f)*
+	glm::rotate(glm::radians(-90.0f), glm::vec3(0.0f, 1.0f, 0.0f))*
+	glm::translate(glm::vec3(0.0f, -0.195f, 0.033f))*
+	glm::rotate(glm::radians(45.0f), glm::vec3(1.0f, 0.0f, 0.0f))*
 	glm::scale(glm::vec3(1.0f, 0.695f, 0.695f)),
 
-	glm::mat4(1.0f) *
-	glm::rotate(glm::radians(-90.0f), glm::vec3(0.0f, 1.0f, 0.0f)) * 
-	glm::translate(glm::vec3(0.0f, 0.095f, 0.325f)) *
-	glm::rotate(glm::radians(45.0f), glm::vec3(1.0f, 0.0f, 0.0f)) *
+	// parallelogram
+	glm::mat4(1.0f)*
+	glm::rotate(glm::radians(-90.0f), glm::vec3(0.0f, 1.0f, 0.0f))*
+	glm::translate(glm::vec3(0.0f, 0.095f, 0.325f))*
+	glm::rotate(glm::radians(45.0f), glm::vec3(1.0f, 0.0f, 0.0f))*
 	glm::scale(glm::vec3(1.0f, 0.7f, 0.7f)),
 
-	glm::mat4(1.0f) *
-	glm::rotate(glm::radians(-90.0f), glm::vec3(0.0f, 1.0f, 0.0f)) * 
-	glm::translate(glm::vec3(0.0f, 0.1f, 0.325f)) *
-	glm::rotate(glm::radians(135.0f), glm::vec3(1.0f, 0.0f, 0.0f)) *
+	// small triangle 1
+	glm::mat4(1.0f)*
+	glm::rotate(glm::radians(-90.0f), glm::vec3(0.0f, 1.0f, 0.0f))*
+	glm::translate(glm::vec3(0.0f, 0.1f, 0.325f))*
+	glm::rotate(glm::radians(135.0f), glm::vec3(1.0f, 0.0f, 0.0f))*
 	glm::scale(glm::vec3(1.0f, 0.515f, 0.51f)),
 
-	glm::mat4(1.0f) *
-	glm::rotate(glm::radians(-90.0f), glm::vec3(0.0f, 1.0f, 0.0f)) * 
-	glm::translate(glm::vec3(0.0f, -0.49f, -0.265f)) *
-	glm::rotate(glm::radians(225.0f), glm::vec3(1.0f, 0.0f, 0.0f)) *
+	// small triangle 2
+	glm::mat4(1.0f)*
+	glm::rotate(glm::radians(-90.0f), glm::vec3(0.0f, 1.0f, 0.0f))*
+	glm::translate(glm::vec3(0.0f, -0.49f, -0.265f))*
+	glm::rotate(glm::radians(225.0f), glm::vec3(1.0f, 0.0f, 0.0f))*
 	glm::scale(glm::vec3(1.0f, 0.515f, 0.515f)),
 
-	glm::mat4(1.0f) *
-	glm::rotate(glm::radians(-90.0f), glm::vec3(0.0f, 1.0f, 0.0f)) * 
-	glm::translate(glm::vec3(0.0f, -0.20f, 0.325f)) *
+	// mid-size triangle
+	glm::mat4(1.0f)*
+	glm::rotate(glm::radians(-90.0f), glm::vec3(0.0f, 1.0f, 0.0f))*
+	glm::translate(glm::vec3(0.0f, -0.20f, 0.325f))*
 	glm::scale(glm::vec3(1.0f, 0.73f, 0.73f)),
 
-	glm::mat4(1.0f) *
-	glm::rotate(glm::radians(-90.0f), glm::vec3(0.0f, 1.0f, 0.0f)) * 
-	glm::translate(glm::vec3(0.0f, 0.695f, 0.035f)) *
-	glm::rotate(glm::radians(45.0f), glm::vec3(1.0f, 0.0f, 0.0f)) *
+	// big triangle 1
+	glm::mat4(1.0f)*
+	glm::rotate(glm::radians(-90.0f), glm::vec3(0.0f, 1.0f, 0.0f))*
+	glm::translate(glm::vec3(0.0f, 0.695f, 0.035f))*
+	glm::rotate(glm::radians(45.0f), glm::vec3(1.0f, 0.0f, 0.0f))*
 	glm::scale(glm::vec3(1.0f, 1.05f, 1.05f)),
 
-	glm::mat4(1.0f) *
-	glm::rotate(glm::radians(-90.0f), glm::vec3(0.0f, 1.0f, 0.0f)) * 
-	glm::translate(glm::vec3(0.0f, 0.10f, -0.565f)) *
-	glm::rotate(glm::radians(-45.0f), glm::vec3(1.0f, 0.0f, 0.0f)) *
+	// big triangle 2
+	glm::mat4(1.0f)*
+	glm::rotate(glm::radians(-90.0f), glm::vec3(0.0f, 1.0f, 0.0f))*
+	glm::translate(glm::vec3(0.0f, 0.10f, -0.565f))*
+	glm::rotate(glm::radians(-45.0f), glm::vec3(1.0f, 0.0f, 0.0f))*
 	glm::scale(glm::vec3(1.0f, 1.05f, 1.05f))
 };
 
 
-
+// Variables that help saving stages of the animation process
 
 glm::mat4 CurrentViewMatrix1 = ViewMatrix1;
 glm::mat4 CurrentViewMatrix2 = ViewMatrix2;
@@ -320,6 +344,9 @@ void MyApp::createCamera() {
 }
 
 /////////////////////////////////////////////////////////////////////////// DRAW
+
+
+// Helper function to interpolate between two models
 
 glm::mat4 interpolateMatrices(const glm::mat4& start, const glm::mat4& end, float t) {
 	glm::vec3 startTranslation, startScale, startSkew;
@@ -345,13 +372,14 @@ void MyApp::drawScene() {
 
 	double currentTime = glfwGetTime();
 
-	float deltaTime = static_cast<float>(currentTime - previousTime); //this ensures that the animation speed is constant between computers
+	//this ensures that the animation speed is constant between computers
+	float deltaTime = static_cast<float>(currentTime - previousTime);
 
 	previousTime = currentTime;
 
+	// Update animation progress if left or right keys are pressed
 	if (isLeftKeyPressed) {
 		float delta = animationSpeed * deltaTime;
-		//std::cout << "Delta: " << delta << std::endl;
 		animationProgress += delta;
 		if (animationProgress >= 1.0f) {
 			animationProgress = 1.0f;
@@ -364,18 +392,15 @@ void MyApp::drawScene() {
 			animationProgress = 0.0f;
 		}
 	}
-	//std::cout << "AnimationProgress: " << animationProgress << std::endl;
 	
 	// Interpolate model matrices based on animationProgress
 	for (size_t i = 0; i < figureModelMatrices.size(); i++) {
 		if (isLeftKeyPressed || animationProgress == 0.0f) {
-			//std::cout << "Vai para a caixa" << std::endl;
 			startMatrix = figureModelMatrices[i];
 			endMatrix = boxModelMatrices[i];
 			sceneGraph.nodes[i].modelMatrix = interpolateMatrices(startMatrix, endMatrix, animationProgress);
 		}
 		else if (isRightKeyPressed || animationProgress == 1.0f) {
-			//std::cout << "Vai para a figura" << std::endl;
 			startMatrix = boxModelMatrices[i];
 			endMatrix = figureModelMatrices[i];
 			sceneGraph.nodes[i].modelMatrix = interpolateMatrices(startMatrix, endMatrix, 1 - animationProgress);
@@ -403,8 +428,8 @@ void MyApp::initCallback(GLFWwindow *win) {
 
 void MyApp::windowSizeCallback(GLFWwindow *win, int winx, int winy) {
   glViewport(0, 0, winx, winy);
-  // change projection matrices to maintain aspect ratio
 
+  // Recompute projection matrices to maintain aspect ratio
   float aspectRatio = static_cast<float>(winx) / static_cast<float>(winy);
 
   glm::mat4 updatedProjectionMatrix1 = glm::ortho(-2.0f * aspectRatio, 2.0f * aspectRatio, -2.0f, 2.0f, 1.0f, 10.0f);
@@ -432,11 +457,9 @@ void MyApp::keyCallback(GLFWwindow* win, int key, int scancode, int action, int 
 		switch (key) {
 		case GLFW_KEY_P: // Switch projection of the current camera
 			if (Camera->getProjectionMatrix() == CurrentProjectionMatrix1) {
-				//std::cout << "Switching to perspective projection" << std::endl;
 				Camera->setProjectionMatrix(CurrentProjectionMatrix2);
 			}
 			else {
-				//std::cout << "Switching to orthographic projection" << std::endl;
 				Camera->setProjectionMatrix(CurrentProjectionMatrix1);
 			}
 			break;
@@ -482,12 +505,13 @@ void MyApp::keyCallback(GLFWwindow* win, int key, int scancode, int action, int 
 
 
 void MyApp::scrollCallback(GLFWwindow* win, double xoffset, double yoffset) {
-	// Zoom factor: adjust this value for smoother zooming
-	const float zoomSpeed = 0.5f;
+
+	const float zoomSpeed = 0.1f;
 
 	// Get the current view matrix and camera position
 	glm::mat4 viewMatrix = Camera->getViewMatrix();
 	glm::vec3 cameraPosition = glm::vec3(glm::inverse(viewMatrix)[3]);
+	glm::vec3 upVector = glm::vec3(glm::inverse(viewMatrix)[1]);
 	glm::vec3 center(0.0f, 0.0f, 0.0f);  // Center of the scene
 
 	// Calculate the direction vector
@@ -497,12 +521,11 @@ void MyApp::scrollCallback(GLFWwindow* win, double xoffset, double yoffset) {
 	cameraPosition += static_cast<float>(yoffset) * zoomSpeed * direction;
 
 	if (CurrentViewMatrix1 == Camera->getViewMatrix()) {
-		// Update the view matrix
-		Camera->setViewMatrix(glm::lookAt(cameraPosition, center, glm::vec3(0.0f, 1.0f, 0.0f)));
+		Camera->setViewMatrix(glm::lookAt(cameraPosition, center, upVector));
 		CurrentViewMatrix1 = Camera->getViewMatrix();
 	}
 	else {
-		Camera->setViewMatrix(glm::lookAt(cameraPosition, center, glm::vec3(0.0f, 1.0f, 0.0f)));
+		Camera->setViewMatrix(glm::lookAt(cameraPosition, center, upVector));
 		CurrentViewMatrix2 = Camera->getViewMatrix();
 	}
 
@@ -525,6 +548,7 @@ void MyApp::rotateCamera(float angleX, float angleY) {
 	glm::vec3 cameraUp = glm::vec3(glm::inverse(cameraView)[1]);
 	glm::vec3 center = glm::vec3(0.0f, 0.0f, 0.0f);
 
+	// Rotate around up and right vectors to achieve orbiting
 	glm::quat q_x = glm::angleAxis(angleX, cameraUp);
 	glm::vec3 camDirection = glm::normalize(center - cameraPosition);
 	glm::vec3 cam_right = glm::normalize(glm::cross(camDirection, cameraUp));
