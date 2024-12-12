@@ -219,7 +219,7 @@ const glm::mat4 ViewMatrix2 =
 // Orthographic LeftRight(-2,2) BottomTop(-2,2) NearFar(1,10) 
 //projection 0
 const glm::mat4 ProjectionMatrix1 =
-    glm::ortho(-2.0f, 2.0f, -2.0f, 2.0f, 1.0f, 10.0f);
+    glm::ortho(-2.0f*(640.0f/480.0f), 2.0f*(640.0f/480.0f), -2.0f, 2.0f, 1.0f, 10.0f);
 
 // Perspective Fovy(30) Aspect(640/480) NearZ(1) FarZ(10)
 //projection 1
@@ -345,7 +345,7 @@ void MyApp::drawScene() {
 
 	double currentTime = glfwGetTime();
 
-	float deltaTime = static_cast<float>(currentTime - previousTime);
+	float deltaTime = static_cast<float>(currentTime - previousTime); //this ensures that the animation speed is constant between computers
 
 	previousTime = currentTime;
 
@@ -407,14 +407,17 @@ void MyApp::windowSizeCallback(GLFWwindow *win, int winx, int winy) {
 
   float aspectRatio = static_cast<float>(winx) / static_cast<float>(winy);
 
+  glm::mat4 updatedProjectionMatrix1 = glm::ortho(-2.0f * aspectRatio, 2.0f * aspectRatio, -2.0f, 2.0f, 1.0f, 10.0f);
+  glm::mat4 updatedProjectionMatrix2 = glm::perspective(glm::radians(30.0f), aspectRatio, 1.0f, 10.0f);
+
   if (CurrentProjectionMatrix1 == Camera->getProjectionMatrix()) {
-	  std::cout << "Orthographic resize" << std::endl;
-	  CurrentProjectionMatrix1 = glm::ortho(-2.0f*aspectRatio, 2.0f*aspectRatio, -2.0f, 2.0f, 1.0f, 10.0f);
+	  CurrentProjectionMatrix1 = updatedProjectionMatrix1;
+	  CurrentProjectionMatrix2 = updatedProjectionMatrix2;
 	  Camera->setProjectionMatrix(CurrentProjectionMatrix1);
   }
   else {
-	  std::cout << "Perspective resize" << std::endl;
-	  CurrentProjectionMatrix2 = glm::perspective(glm::radians(30.0f), aspectRatio, 1.0f, 10.0f);
+	  CurrentProjectionMatrix2 = updatedProjectionMatrix2;
+	  CurrentProjectionMatrix1 = updatedProjectionMatrix1;
 	  Camera->setProjectionMatrix(CurrentProjectionMatrix2);
   }
 
