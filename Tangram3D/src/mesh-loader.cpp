@@ -393,16 +393,19 @@ void MyApp::windowSizeCallback(GLFWwindow *win, int winx, int winy) {
   // change projection matrices to maintain aspect ratio
 
   float aspectRatio = static_cast<float>(winx) / static_cast<float>(winy);
+  glm::mat4 updatedProjectionMatrix1= glm::ortho(-2.0f * aspectRatio, 2.0f * aspectRatio, -2.0f, 2.0f, 1.0f, 10.0f);
+  glm::mat4 updatedProjectionMatrix2 = glm::perspective(glm::radians(30.0f), aspectRatio, 1.0f, 10.0f);
 
   if (CurrentProjectionMatrix1 == Camera->getProjectionMatrix()) {
-	  //a chance can be visible in the display when resizing the window in orthographic projection for the first time 
-	  // because the initial orthographic 
-	  // projection doesn't have the aspect ratio of the window
-	  CurrentProjectionMatrix1 = glm::ortho(-2.0f*aspectRatio, 2.0f*aspectRatio, -2.0f, 2.0f, 1.0f, 10.0f);
+	  //both projection matrices have to be updated
+	  CurrentProjectionMatrix1 = updatedProjectionMatrix1;
+	  CurrentProjectionMatrix2 = updatedProjectionMatrix2;
 	  Camera->setProjectionMatrix(CurrentProjectionMatrix1);
   }
   else {
-	  CurrentProjectionMatrix2 = glm::perspective(glm::radians(30.0f), aspectRatio, 1.0f, 10.0f);
+	  //both projection matrices have to be updated
+	  CurrentProjectionMatrix1 = updatedProjectionMatrix1;
+	  CurrentProjectionMatrix2 = updatedProjectionMatrix2;
 	  Camera->setProjectionMatrix(CurrentProjectionMatrix2);
   }
 
