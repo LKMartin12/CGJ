@@ -36,18 +36,23 @@ public:
 		shader->addShader(GL_FRAGMENT_SHADER, "cube-fs.glsl");
 
 		shader->addAttribute(mgl::POSITION_ATTRIBUTE, mgl::Mesh::POSITION);
-		shader->addAttribute(mgl::NORMAL_ATTRIBUTE, mgl::Mesh::NORMAL);
 
-		shader->addAttribute(mgl::TEXCOORD_ATTRIBUTE, mgl::Mesh::TEXCOORD);
-
-		shader->addAttribute(mgl::TANGENT_ATTRIBUTE, mgl::Mesh::TANGENT);
+		if (mesh->hasNormals()) {
+			shader->addAttribute(mgl::NORMAL_ATTRIBUTE, mgl::Mesh::NORMAL);
+		}
+		if (mesh->hasTexcoords()) {
+			shader->addAttribute(mgl::TEXCOORD_ATTRIBUTE, mgl::Mesh::TEXCOORD);
+		}
+		if (mesh->hasTangentsAndBitangents()) {
+			shader->addAttribute(mgl::BITANGENT_ATTRIBUTE, mgl::Mesh::BITANGENT);
+		}
 
 		shader->addUniform(mgl::MODEL_MATRIX);
-		shader->addUniform("givenColor");
+		shader->addUniform("givenColor"); //uniform for the color of the object
 		shader->addUniformBlock(mgl::CAMERA_BLOCK, 0);
 		shader->create();
 
-		colorId = shader->Uniforms["givenColor"].index;
+		colorId = shader->Uniforms["givenColor"].index; //make colorId connect to the uniform "givenColor" in shader
 		modelMatrixId = shader->Uniforms[mgl::MODEL_MATRIX].index;
 	}
 
@@ -83,8 +88,8 @@ public:
 	void draw() {
 		for (const auto& node : nodes) {
 			node.shader->bind();
-			glUniform3fv(node.colorId, 1, glm::value_ptr(node.color));
-			glUniformMatrix4fv(node.modelMatrixId, 1, GL_FALSE, glm::value_ptr(node.modelMatrix));
+			glUniform3fv(node.colorId, 1, glm::value_ptr(node.color)); //pass the color to the shader
+			glUniformMatrix4fv(node.modelMatrixId, 1, GL_FALSE, glm::value_ptr(node.modelMatrix)); //pass the model matrix to the shader
 			node.mesh->draw();
 			node.shader->unbind();
 		}
@@ -125,8 +130,6 @@ class MyApp : public mgl::App {
   mgl::Mesh* SquareMesh = nullptr;
   mgl::Mesh* TriangleMesh = nullptr;
   mgl::Mesh* ParallelogramMesh = nullptr;
-  //std::vector<mgl::Mesh*> Meshes;
-  //std::vector<glm::mat4> ModelMatrices;
   SceneGraph sceneGraph;
   bool rotatingView = false;
   double mouse_x, mouse_y;
@@ -141,8 +144,8 @@ class MyApp : public mgl::App {
   float animationSpeed = 0.5f;    // Speed of the animation
   bool isLeftKeyPressed = false;
   bool isRightKeyPressed = false;
-  glm::mat4 startMatrix;
-  glm::mat4 endMatrix;
+  glm::mat4 startMatrix; //used for the interpolation of the model matrices
+  glm::mat4 endMatrix; //used for the interpolation of the model matrices
 };
 
 ///////////////////////////////////////////////////////////////////////// MESHES
@@ -152,12 +155,10 @@ void MyApp::createMeshes() {
   std::string mesh_file = "square.obj";
   std::string mesh_file2 = "parallelogram.obj";
   std::string mesh_file3 = "triangle.obj";
-  //std::string mesh_file = "monkey-torus-vtn-flat.obj";
   std::string mesh_fullname = mesh_dir + mesh_file;
   SquareMesh = new mgl::Mesh();
   SquareMesh->joinIdenticalVertices();
   SquareMesh->create(mesh_fullname);
-  //Meshes.push_back(SquareMesh);
   sceneGraph.addNode(Node(SquareMesh, glm::mat4(1.0f)));
   sceneGraph.setNodeColor(0, glm::vec3(0.0f, 0.6f, 0.0f)); //square color (green)	
 
@@ -165,17 +166,14 @@ void MyApp::createMeshes() {
   ParallelogramMesh = new mgl::Mesh();
   ParallelogramMesh->joinIdenticalVertices();
   ParallelogramMesh->create(mesh_fullname);
-  //Meshes.push_back(ParallelogramMesh);
   sceneGraph.addNode(Node(ParallelogramMesh, glm::mat4(1.0f)));
   sceneGraph.setNodeColor(1, glm::vec3(1.0f, 0.647f, 0.0f)); //paralelogram color (orange)
-  
+
 
   mesh_fullname = mesh_dir + mesh_file3;
-  
-	  TriangleMesh = new mgl::Mesh();
-	  TriangleMesh->joinIdenticalVertices();
-	  TriangleMesh->create(mesh_fullname);
-	  //Meshes.push_back(TriangleMesh);
+  TriangleMesh = new mgl::Mesh();
+  TriangleMesh->joinIdenticalVertices();
+  TriangleMesh->create(mesh_fullname);
   for (uint16_t i = 0; i < 5; i++) {
 	sceneGraph.addNode(Node(TriangleMesh, glm::mat4(1.0f)));
 	if (i == 0) {
@@ -194,7 +192,6 @@ void MyApp::createMeshes() {
 		sceneGraph.setNodeColor(i + 2, glm::vec3(0.780f, 0.082f, 0.522f)); //big triangle 2 color (pink-red)
 	}
   }
-  //ModelMatrices.resize(Meshes.size(), glm::mat4(1.0f));
 }
 
 ///////////////////////////////////////////////////////////////////////// SHADER
@@ -216,7 +213,6 @@ const glm::mat4 ViewMatrix2 =
                 glm::vec3(0.0f, 1.0f, 0.0f));
 
 // Orthographic LeftRight(-2,2) BottomTop(-2,2) NearFar(1,10) 
-//projection 0
 const glm::mat4 ProjectionMatrix1 =
     glm::ortho(-2.0f, 2.0f, -2.0f, 2.0f, 1.0f, 10.0f);
 
@@ -225,6 +221,8 @@ const glm::mat4 ProjectionMatrix1 =
 const glm::mat4 ProjectionMatrix2 =
     glm::perspective(glm::radians(30.0f), 640.0f / 480.0f, 1.0f, 10.0f);
 
+//this are the model matrices for each node when they are in the figure configuration
+//the .obj files already have the correct orientation for the tangram pieces (they are all facing the x axis)
 std::vector<glm::mat4> figureModelMatrices = {
 		glm::mat4(1.0f)*
 		glm::translate(glm::vec3(0.0f, 0.69f, -0.30f))*
@@ -259,6 +257,8 @@ std::vector<glm::mat4> figureModelMatrices = {
 		glm::rotate(glm::radians(150.0f), glm::vec3(1.0f, 0.0f, 0.0f))
 };
 
+//this are the model matrices for each node when they are in the box configuration
+//they all start with a rotation of -90 degrees in the y axis, and then they are positioned accordingly
 std::vector<glm::mat4> boxModelMatrices = {
 	glm::mat4(1.0f) *
 	glm::rotate(glm::radians(-90.0f), glm::vec3(0.0f, 1.0f, 0.0f)) * 
@@ -302,15 +302,12 @@ std::vector<glm::mat4> boxModelMatrices = {
 	glm::scale(glm::vec3(1.0f, 1.05f, 1.05f))
 };
 
-
-
-
 glm::mat4 CurrentViewMatrix1 = ViewMatrix1;
 glm::mat4 CurrentViewMatrix2 = ViewMatrix2;
 int CurrentCam = 1;
 glm::mat4 CurrentProjectionMatrix1 = ProjectionMatrix1;
 glm::mat4 CurrentProjectionMatrix2 = ProjectionMatrix2;
-std::vector<glm::mat4> CurrentModelMatrix;
+std::vector<glm::mat4> CurrentModelMatrix; // Current model matrices for each node
 
 void MyApp::createCamera() {
   Camera = new mgl::Camera(UBO_BP);
@@ -343,7 +340,7 @@ void MyApp::drawScene() {
 	if (isLeftKeyPressed) {
 		float delta = animationSpeed * 0.01f;
 		//std::cout << "Delta: " << delta << std::endl;
-		animationProgress += delta;
+		animationProgress += delta; 
 		if (animationProgress >= 1.0f) {
 			animationProgress = 1.0f;
 		}
@@ -355,21 +352,23 @@ void MyApp::drawScene() {
 			animationProgress = 0.0f;
 		}
 	}
-	//std::cout << "AnimationProgress: " << animationProgress << std::endl;
 	
 	// Interpolate model matrices based on animationProgress
 	for (size_t i = 0; i < figureModelMatrices.size(); i++) {
 		if (isLeftKeyPressed || animationProgress == 0.0f) {
-			//std::cout << "Vai para a caixa" << std::endl;
+			//tangram config is considered the initial state (animation progress = 0)
+			//box config is considered the final state (animation progress = 1)
 			startMatrix = figureModelMatrices[i];
 			endMatrix = boxModelMatrices[i];
 			sceneGraph.nodes[i].modelMatrix = interpolateMatrices(startMatrix, endMatrix, animationProgress);
 		}
 		else if (isRightKeyPressed || animationProgress == 1.0f) {
-			//std::cout << "Vai para a figura" << std::endl;
+			//box config is considered the initial state (animation progress = 0)
+			//tangram config is considered the final state (animation progress = 1)
 			startMatrix = boxModelMatrices[i];
 			endMatrix = figureModelMatrices[i];
 			sceneGraph.nodes[i].modelMatrix = interpolateMatrices(startMatrix, endMatrix, 1 - animationProgress);
+			//because the interpolation is done in the opposite direction, the T factor passed in interpolateMatrices is 1 - animationProgress
 		}
 		else {
 			sceneGraph.nodes[i].modelMatrix = CurrentModelMatrix[i];
@@ -377,7 +376,7 @@ void MyApp::drawScene() {
 		CurrentModelMatrix[i] = sceneGraph.nodes[i].modelMatrix;
 	}
 	sceneGraph.draw();
-	sceneGraph.resetNodesTransformations();
+	sceneGraph.resetNodesTransformations(); //reset is done so that the next drawScene doesn't have the previous transformations
 }
 
 ////////////////////////////////////////////////////////////////////// CALLBACKS
@@ -386,7 +385,6 @@ void MyApp::initCallback(GLFWwindow *win) {
 	createMeshes();
 	createShaderPrograms();
 	createCamera();
-
 	CurrentModelMatrix.resize(figureModelMatrices.size(), glm::mat4(1.0f));
 }
 
@@ -397,12 +395,13 @@ void MyApp::windowSizeCallback(GLFWwindow *win, int winx, int winy) {
   float aspectRatio = static_cast<float>(winx) / static_cast<float>(winy);
 
   if (CurrentProjectionMatrix1 == Camera->getProjectionMatrix()) {
-	  std::cout << "Orthographic resize" << std::endl;
+	  //a chance can be visible in the display when resizing the window in orthographic projection for the first time 
+	  // because the initial orthographic 
+	  // projection doesn't have the aspect ratio of the window
 	  CurrentProjectionMatrix1 = glm::ortho(-2.0f*aspectRatio, 2.0f*aspectRatio, -2.0f, 2.0f, 1.0f, 10.0f);
 	  Camera->setProjectionMatrix(CurrentProjectionMatrix1);
   }
   else {
-	  std::cout << "Perspective resize" << std::endl;
 	  CurrentProjectionMatrix2 = glm::perspective(glm::radians(30.0f), aspectRatio, 1.0f, 10.0f);
 	  Camera->setProjectionMatrix(CurrentProjectionMatrix2);
   }
@@ -418,11 +417,9 @@ void MyApp::keyCallback(GLFWwindow* win, int key, int scancode, int action, int 
 		switch (key) {
 		case GLFW_KEY_P: // Switch projection of the current camera
 			if (Camera->getProjectionMatrix() == CurrentProjectionMatrix1) {
-				//std::cout << "Switching to perspective projection" << std::endl;
 				Camera->setProjectionMatrix(CurrentProjectionMatrix2);
 			}
 			else {
-				//std::cout << "Switching to orthographic projection" << std::endl;
 				Camera->setProjectionMatrix(CurrentProjectionMatrix1);
 			}
 			break;
@@ -473,7 +470,8 @@ void MyApp::scrollCallback(GLFWwindow* win, double xoffset, double yoffset) {
 
 	// Get the current view matrix and camera position
 	glm::mat4 viewMatrix = Camera->getViewMatrix();
-	glm::vec3 cameraPosition = glm::vec3(glm::inverse(viewMatrix)[3]);
+	glm::vec3 cameraPosition = glm::vec3(glm::inverse(viewMatrix)[3]); // Camera position
+	glm::vec3 upVector = glm::vec3(glm::inverse(viewMatrix)[1]); // Up vector
 	glm::vec3 center(0.0f, 0.0f, 0.0f);  // Center of the scene
 
 	// Calculate the direction vector
@@ -482,19 +480,20 @@ void MyApp::scrollCallback(GLFWwindow* win, double xoffset, double yoffset) {
 	// Adjust the camera position based on scroll input
 	cameraPosition += static_cast<float>(yoffset) * zoomSpeed * direction;
 
+	// Update the view matrix
 	if (CurrentViewMatrix1 == Camera->getViewMatrix()) {
-		// Update the view matrix
-		Camera->setViewMatrix(glm::lookAt(cameraPosition, center, glm::vec3(0.0f, 1.0f, 0.0f)));
+		Camera->setViewMatrix(glm::lookAt(cameraPosition, center, upVector));
 		CurrentViewMatrix1 = Camera->getViewMatrix();
 	}
 	else {
-		Camera->setViewMatrix(glm::lookAt(cameraPosition, center, glm::vec3(0.0f, 1.0f, 0.0f)));
+		Camera->setViewMatrix(glm::lookAt(cameraPosition, center, upVector));
 		CurrentViewMatrix2 = Camera->getViewMatrix();
 	}
 
 }
 
 void MyApp::mouseButtonCallback(GLFWwindow* win, int button, int action, int mods) {
+	//callback only to change a boolean value that will be used in the cursor callback
 	if (button == GLFW_MOUSE_BUTTON_LEFT && action == GLFW_PRESS) {
 		glfwGetCursorPos(win, &mouse_x, &mouse_y);
 		rotatingView = true;
@@ -507,18 +506,19 @@ void MyApp::mouseButtonCallback(GLFWwindow* win, int button, int action, int mod
 
 void MyApp::rotateCamera(float angleX, float angleY) {
 	glm::mat4 cameraView = Camera->getViewMatrix();
-	glm::vec3 cameraPosition = glm::vec3(glm::inverse(cameraView)[3]);
-	glm::vec3 cameraUp = glm::vec3(glm::inverse(cameraView)[1]);
+	glm::vec3 cameraPosition = glm::vec3(glm::inverse(cameraView)[3]); //camera position
+	glm::vec3 cameraUp = glm::vec3(glm::inverse(cameraView)[1]); //up vector
 	glm::vec3 center = glm::vec3(0.0f, 0.0f, 0.0f);
 
-	glm::quat q_x = glm::angleAxis(angleX, cameraUp);
-	glm::vec3 camDirection = glm::normalize(center - cameraPosition);
-	glm::vec3 cam_right = glm::normalize(glm::cross(camDirection, cameraUp));
-	glm::quat q_y = glm::angleAxis(angleY, cam_right);
-	glm::quat q = q_x * q_y;
+	glm::quat q_x = glm::angleAxis(angleX, cameraUp); //rotation around the up vector by angleX
+	glm::vec3 camDirection = glm::normalize(center - cameraPosition); //camera direction
+	glm::vec3 cam_right = glm::normalize(glm::cross(camDirection, cameraUp)); //right vector
+	glm::quat q_y = glm::angleAxis(angleY, cam_right); //rotation around the right vector by angleY
+	glm::quat q = q_x * q_y; //combined rotation
 
-	cameraUp = q * cameraUp;
-	cameraPosition = q * cameraPosition;
+	cameraUp = q * cameraUp; //apply the rotation to the up vector
+	cameraPosition = q * cameraPosition; //apply the rotation to the camera position
+	//set new view Matrix
 	Camera->setViewMatrix(glm::lookAt(cameraPosition, center, cameraUp));
 	if (CurrentCam == 1) {
 		CurrentViewMatrix1 = Camera->getViewMatrix();
@@ -532,15 +532,19 @@ void MyApp::cursorCallback(GLFWwindow* win, double xpos, double ypos) {
 	if (!rotatingView) return;
 
 	const double sensitivity = 0.005f;
+	// Calculate the difference in mouse position
 	double dx = xpos - mouse_x;
 	double dy = ypos - mouse_y;
 
+	// Update the mouse position
 	mouse_x = xpos;
 	mouse_y = ypos;
 
+	// Calculate the rotation angles
 	float angleX = static_cast<float>(-dx * sensitivity) ;
 	float angleY = static_cast<float>(-dy * sensitivity) ;
 
+	// Rotate the camera
 	rotateCamera(angleX, angleY);
 
 }
